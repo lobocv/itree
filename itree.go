@@ -47,6 +47,10 @@ func printdircontents(dir DirContext, x, y int) error {
 	return nil
 }
 
+func ClearScreen() {
+	termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
+}
+
 /*
 Directory methods
 */
@@ -74,15 +78,20 @@ func (d* DirContext) SetDirectory(path string) error {
 		return err
 	}
 
+	var filtered []os.FileInfo
 	// Filter out hidden files
-	filtered := files[:0]
-	for _, f := range files{
-		if ! strings.HasPrefix(f.Name(), ".") {
-			filtered = append(filtered, f)
+	if ! d.ShowHidden {
+		filtered = files[:0]
+		for _, f := range files{
+			if ! strings.HasPrefix(f.Name(), ".") {
+				filtered = append(filtered, f)
+			}
 		}
+		// Sort by directory
+		sort.Sort(OSFiles(filtered))
+	} else {
+		filtered = files[:]
 	}
-	// Sort by directory
-	sort.Sort(OSFiles(filtered))
 
 	// Check that the index hasn't gone out of bounds
 	d.Files = filtered
@@ -130,6 +139,10 @@ func (d* DirContext) MoveSelector(dy int) {
 	d.FileIdx = idx
 }
 
+func (d* DirContext) SetShowHidden(v bool) {
+	d.ShowHidden = v
+	d.SetDirectory(d.AbsPath)
+}
 
 /*
 Application
@@ -168,24 +181,24 @@ MainLoop:
 
 			case termbox.KeyArrowUp:
 				dir.MoveSelector(-1)
-				termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
+				ClearScreen()
 			case termbox.KeyArrowDown:
 				dir.MoveSelector(1)
-				termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
-
-
+				ClearScreen()
 			case termbox.KeyArrowLeft:
 				dir.Ascend()
-				termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
+				ClearScreen()
 			case termbox.KeyArrowRight:
 				dir.Descend()
-				termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
-
+				ClearScreen()
 			}
 
 		switch ev.Ch {
 		case 'q':
 			break MainLoop
+		case 'h':
+			dir.SetShowHidden(!dir.ShowHidden)
+			ClearScreen()
 		}
 
 		case termbox.EventResize:
