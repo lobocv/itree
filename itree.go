@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sort"
 )
 
 /*
@@ -57,6 +58,11 @@ type DirContext struct {
 	ShowHidden bool
 }
 
+type OSFiles []os.FileInfo
+func (f OSFiles) Len() int { return len(f)}
+func (f OSFiles) Swap(i, j int) { f[i], f[j] = f[j], f[i]}
+func (f OSFiles) Less(i, j int) bool { return f[i].IsDir() }
+
 func (d* DirContext) SetDirectory(path string) error {
 	//var err error
 	if _, err := os.Stat(path); err != nil {
@@ -67,14 +73,22 @@ func (d* DirContext) SetDirectory(path string) error {
 	if err != nil {
 		return err
 	}
+
+	// Filter out hidden files
 	filtered := files[:0]
 	for _, f := range files{
 		if ! strings.HasPrefix(f.Name(), ".") {
 			filtered = append(filtered, f)
 		}
 	}
-	d.Files = filtered
+	// Sort by directory
+	sort.Sort(OSFiles(filtered))
 
+	// Check that the index hasn't gone out of bounds
+	d.Files = filtered
+	if d.FileIdx > len(d.Files)-1 {
+		d.FileIdx = len(d.Files)-1
+	}
 	return nil
 }
 
@@ -91,11 +105,12 @@ func (d* DirContext) Ascend() error {
 }
 
 func (d* DirContext) Descend() error {
+	if len(d.Files) == 0 {
+		return nil
+	}
 	f := d.Files[d.FileIdx]
-	tbprint(50, 10, termbox.ColorWhite,termbox.ColorRed, f.Name())
 	if f.IsDir() {
 		newpath := path.Join(d.AbsPath, f.Name())
-		tbprint(50, 10, termbox.ColorWhite,termbox.ColorRed, newpath)
 		d.SetDirectory(newpath)
 
 		return nil
