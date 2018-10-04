@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 /*
@@ -22,13 +23,8 @@ func tbprint(x, y int, fg, bg termbox.Attribute, msg string) {
 }
 
 func printdircontents(dir DirContext, x, y int) error {
-	files, err := ioutil.ReadDir(dir.AbsPath)
-	if err != nil {
-		return err
-	}
-
 	tbprint(x, y, termbox.ColorRed, termbox.ColorDefault, dir.AbsPath)
-	for yoffset, f := range files {
+	for yoffset, f := range dir.Files {
 		var color termbox.Attribute
 		var itemname string
 
@@ -58,6 +54,7 @@ type DirContext struct {
 	AbsPath string
 	Files []os.FileInfo
 	FileIdx int
+	ShowHidden bool
 }
 
 func (d* DirContext) SetDirectory(path string) error {
@@ -66,11 +63,17 @@ func (d* DirContext) SetDirectory(path string) error {
 		return err
 	}
 	d.AbsPath = path
-	f, err := ioutil.ReadDir(d.AbsPath)
+	files, err := ioutil.ReadDir(d.AbsPath)
 	if err != nil {
 		return err
 	}
-	d.Files = f
+	filtered := files[:0]
+	for _, f := range files{
+		if ! strings.HasPrefix(f.Name(), ".") {
+			filtered = append(filtered, f)
+		}
+	}
+	d.Files = filtered
 
 	return nil
 }
