@@ -1,0 +1,8 @@
+#!/bin/bash
+
+
+CWD=$(dirname $(readlink -e $0))
+DIR=$(go run $CWD/itree.go)
+
+echo "Changing directory to $DIR"
+cd $DIR

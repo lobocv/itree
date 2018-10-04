@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -34,7 +35,12 @@ func printdircontents(dir DirContext, x, y int) error {
 		if dir.FileIdx == yoffset {
 			color =  termbox.ColorCyan
 		} else {
-			color =  termbox.ColorWhite
+			if f.IsDir() {
+				color = termbox.ColorYellow
+			} else {
+				color =  termbox.ColorWhite
+			}
+
 		}
 		if f.IsDir() { itemname = "/"}
 		itemname += f.Name()
@@ -65,6 +71,7 @@ func (d* DirContext) SetDirectory(path string) error {
 		return err
 	}
 	d.Files = f
+
 	return nil
 }
 
@@ -156,7 +163,6 @@ MainLoop:
 				dir.Descend()
 				termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
 
-
 			}
 
 		switch ev.Ch {
@@ -168,4 +174,7 @@ MainLoop:
 		}
 		termbox.Flush()
 	}
+
+	// We must print the directory we end up in so that we can change to it
+	fmt.Print(dir.AbsPath)
 }
