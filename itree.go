@@ -16,6 +16,7 @@ import (
 Screen drawing methods
 */
 
+
 func tbprint(x, y int, fg, bg termbox.Attribute, msg string) {
 	for _, c := range msg {
 		termbox.SetCell(x, y, c, fg, bg)
@@ -24,6 +25,8 @@ func tbprint(x, y int, fg, bg termbox.Attribute, msg string) {
 }
 
 func printdircontents(dir DirContext, x, y int) error {
+	width, height := termbox.Size()
+	width = width
 	tbprint(x, y, termbox.ColorRed, termbox.ColorDefault, dir.AbsPath)
 	for yoffset, f := range dir.Files {
 		var color termbox.Attribute
@@ -41,7 +44,11 @@ func printdircontents(dir DirContext, x, y int) error {
 		}
 		if f.IsDir() { itemname = "/"}
 		itemname += f.Name()
-		tbprint(x, y + yoffset+1,color, termbox.ColorDefault,  "   " + itemname)
+		row := (y + yoffset+1) % height
+		col := int((y + yoffset+1) / height)
+		if row < height {
+			tbprint(col * 20, row, color, termbox.ColorDefault, "   " + itemname)
+		}
 	}
 
 	return nil
@@ -150,6 +157,7 @@ Application
 
 func main() {
 	err := termbox.Init()
+
 	if err != nil {
 		panic(err)
 	}
