@@ -27,12 +27,14 @@ const (
 type Screen struct {
 	dir *DirContext
 	Width, Height int
+	SearchString []rune
 	state ScreenState
+
 }
 
 func GetScreen(dir *DirContext) Screen {
 	w, h := termbox.Size()
-	return Screen{dir, w, h, Directory}
+	return Screen{dir, w, h, make([]rune, 0, 100), Directory}
 }
 
 func (s* Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
@@ -88,8 +90,11 @@ func (s* Screen) Draw() {
 		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, "h - Toggle hidden files and folders.")
 	case Directory:
 		s.PrintDirContents()
+	case Search:
+		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "Enter a search string:")
+		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, string(s.SearchString))
 	}
-		
+
 	termbox.Flush()
 }
 
@@ -192,11 +197,22 @@ func (d* DirContext) SetShowHidden(v bool) {
 	d.SetDirectory(d.AbsPath)
 }
 
+func (d* DirContext) FilterContents(searchstring string) {
+	filtered := d.Files[:0]
+	for _, f := range d.Files {
+		if strings.Contains(f.Name(), searchstring) {
+			filtered = append(filtered, f)
+		}
+	}
+	d.Files = filtered
+}
+
 /*
 Application
 */
 
 func main() {
+	var inputmode = false
 	err := termbox.Init()
 
 	if err != nil {
@@ -218,12 +234,31 @@ func main() {
 	dir.SetDirectory(cwd)
 	screen := GetScreen(&dir)
 
+
 MainLoop:
 	for {
 
 		screen.Draw()
 
 		ev := termbox.PollEvent()
+		if inputmode {
+			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC{
+				inputmode = false
+				screen.SearchString = screen.SearchString[:0]
+				screen.SetState(Directory)
+			} else if ev.Key == termbox.KeyEnter {
+				dir.FilterContents(string(screen.SearchString))
+				inputmode = false
+				screen.SetState(Directory)
+			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace{
+				if len(screen.SearchString) > 0 {
+					screen.SearchString = screen.SearchString[:len(screen.SearchString)-1]
+				}
+			} else {
+				screen.SearchString = append(screen.SearchString, ev.Ch)
+			}
+			continue MainLoop
+		}
 
 		switch ev.Type {
 		case termbox.EventKey:
@@ -245,8 +280,14 @@ MainLoop:
 					} else {
 					screen.SetState(Directory)
 				}
-
-
+			case termbox.KeyCtrlS:
+				if screen.GetState() != Search {
+					screen.SetState(Search)
+					inputmode = true
+				} else {
+					screen.SetState(Directory)
+					inputmode = false
+				}
 			}
 
 		switch ev.Ch {
