@@ -136,8 +136,7 @@ MainLoop:
 			}
 
 		}
-		// We must print the directory we end up in so that we can change to it
-		fmt.Print(dir.AbsPath)
-
 	}
+	// We must print the directory we end up in so that we can change to it
+	fmt.Print(dir.AbsPath)
 }
