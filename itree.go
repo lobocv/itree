@@ -1,23 +1,23 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"github.com/nsf/termbox-go"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
-	"errors"
-	"fmt"
-	"strings"
 	"sort"
+	"strings"
 )
 
 /*
 Screen drawing methods
 */
 
-
 type ScreenState int
+
 const (
 	Directory ScreenState = iota
 	Help
@@ -25,11 +25,10 @@ const (
 )
 
 type Screen struct {
-	dir *DirContext
+	dir           *DirContext
 	Width, Height int
-	SearchString []rune
-	state ScreenState
-
+	SearchString  []rune
+	state         ScreenState
 }
 
 func GetScreen(dir *DirContext) Screen {
@@ -37,52 +36,59 @@ func GetScreen(dir *DirContext) Screen {
 	return Screen{dir, w, h, make([]rune, 0, 100), Directory}
 }
 
-func (s* Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
+func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	for _, c := range msg {
 		termbox.SetCell(x, y, c, fg, bg)
 		x++
 	}
 }
 
-func (s* Screen) PrintDirContents() error {
+func (s *Screen) PrintDirContents() error {
 	_, height := termbox.Size()
 	var x, y int
 	s.Print(x, y, termbox.ColorRed, termbox.ColorDefault, s.dir.AbsPath)
-	for yoffset, f := range s.dir.Files {
+	for ii, f := range s.dir.Files {
 		var color termbox.Attribute
 		var itemname string
 
-		if s.dir.FileIdx == yoffset {
-			color =  termbox.ColorCyan
+		if s.dir.FileIdx == ii {
+			color = termbox.ColorCyan
 		} else {
 			if f.IsDir() {
 				color = termbox.ColorYellow
 			} else {
-				color =  termbox.ColorWhite
+				color = termbox.ColorWhite
 			}
 
 		}
-		if f.IsDir() { itemname = "/"}
-		itemname += f.Name()
-		row := (y + yoffset+1) % height
-		col := int((y + yoffset+1) / height)
+		itemname = f.Name()
+		if f.IsDir() {
+			itemname += "/"
+		}
+		row := (y + ii + 1) % height
+		col := int((y + ii + 1) / height)
 		if row < height {
-			s.Print(col * 20, row, color, termbox.ColorDefault, "   " + itemname)
+			var prefix string
+			if ii == len(s.dir.Files)-1 {
+				prefix += "└─"
+			} else {
+				prefix += "├─"
+			}
+			s.Print(col*20, row, color, termbox.ColorDefault, prefix+itemname)
 		}
 	}
 
 	return nil
 }
 
-
-func (s* Screen) GetState() ScreenState {
+func (s *Screen) GetState() ScreenState {
 	return s.state
 }
-func (s* Screen) SetState(state ScreenState) {
+func (s *Screen) SetState(state ScreenState) {
 	s.state = state
 }
 
-func (s* Screen) Draw() {
+func (s *Screen) Draw() {
 	s.ClearScreen()
 	switch s.state {
 	case Help:
@@ -98,9 +104,8 @@ func (s* Screen) Draw() {
 	termbox.Flush()
 }
 
-
-func (d* Screen) ClearScreen() {
-	termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
+func (d *Screen) ClearScreen() {
+	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 }
 
 /*
@@ -108,19 +113,20 @@ Directory methods
 */
 
 type DirContext struct {
-	AbsPath string
-	Files []os.FileInfo
-	FileIdx int
+	AbsPath    string
+	Files      []os.FileInfo
+	FileIdx    int
 	ShowHidden bool
 }
 
 // Methods for filtering files by directory, then file
 type OSFiles []os.FileInfo
-func (f OSFiles) Len() int { return len(f)}
-func (f OSFiles) Swap(i, j int) { f[i], f[j] = f[j], f[i]}
+
+func (f OSFiles) Len() int           { return len(f) }
+func (f OSFiles) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 func (f OSFiles) Less(i, j int) bool { return f[i].IsDir() }
 
-func (d* DirContext) SetDirectory(path string) error {
+func (d *DirContext) SetDirectory(path string) error {
 	//var err error
 	if _, err := os.Stat(path); err != nil {
 		return err
@@ -133,10 +139,10 @@ func (d* DirContext) SetDirectory(path string) error {
 
 	var filtered []os.FileInfo
 	// Filter out hidden files
-	if ! d.ShowHidden {
+	if !d.ShowHidden {
 		filtered = files[:0]
-		for _, f := range files{
-			if ! strings.HasPrefix(f.Name(), ".") {
+		for _, f := range files {
+			if !strings.HasPrefix(f.Name(), ".") {
 				filtered = append(filtered, f)
 			}
 		}
@@ -149,12 +155,12 @@ func (d* DirContext) SetDirectory(path string) error {
 	// Check that the index hasn't gone out of bounds
 	d.Files = filtered
 	if d.FileIdx > len(d.Files)-1 {
-		d.FileIdx = len(d.Files)-1
+		d.FileIdx = len(d.Files) - 1
 	}
 	return nil
 }
 
-func (d* DirContext) Ascend() error {
+func (d *DirContext) Ascend() error {
 	newpath := path.Dir(d.AbsPath)
 	err := d.SetDirectory(newpath)
 	for idx, f := range d.Files {
@@ -166,7 +172,7 @@ func (d* DirContext) Ascend() error {
 	return err
 }
 
-func (d* DirContext) Descend() error {
+func (d *DirContext) Descend() error {
 	if len(d.Files) == 0 {
 		return nil
 	}
@@ -181,23 +187,22 @@ func (d* DirContext) Descend() error {
 	}
 }
 
-
-func (d* DirContext) MoveSelector(dy int) {
+func (d *DirContext) MoveSelector(dy int) {
 	idx := d.FileIdx + dy
 	if idx >= len(d.Files) {
-		idx = len(d.Files) -1
+		idx = len(d.Files) - 1
 	} else if idx < 0 {
 		idx = 0
 	}
 	d.FileIdx = idx
 }
 
-func (d* DirContext) SetShowHidden(v bool) {
+func (d *DirContext) SetShowHidden(v bool) {
 	d.ShowHidden = v
 	d.SetDirectory(d.AbsPath)
 }
 
-func (d* DirContext) FilterContents(searchstring string) {
+func (d *DirContext) FilterContents(searchstring string) {
 	filtered := d.Files[:0]
 	for _, f := range d.Files {
 		if strings.Contains(f.Name(), searchstring) {
@@ -229,11 +234,9 @@ func main() {
 		panic("Cannot get absolute directory.")
 	}
 
-
 	dir := DirContext{}
 	dir.SetDirectory(cwd)
 	screen := GetScreen(&dir)
-
 
 MainLoop:
 	for {
@@ -242,7 +245,7 @@ MainLoop:
 
 		ev := termbox.PollEvent()
 		if inputmode {
-			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC{
+			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
 				inputmode = false
 				screen.SearchString = screen.SearchString[:0]
 				screen.SetState(Directory)
@@ -250,7 +253,7 @@ MainLoop:
 				dir.FilterContents(string(screen.SearchString))
 				inputmode = false
 				screen.SetState(Directory)
-			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace{
+			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace {
 				if len(screen.SearchString) > 0 {
 					screen.SearchString = screen.SearchString[:len(screen.SearchString)-1]
 				}
@@ -277,7 +280,7 @@ MainLoop:
 			case termbox.KeyCtrlH:
 				if screen.GetState() != Help {
 					screen.SetState(Help)
-					} else {
+				} else {
 					screen.SetState(Directory)
 				}
 			case termbox.KeyCtrlS:
@@ -290,13 +293,13 @@ MainLoop:
 				}
 			}
 
-		switch ev.Ch {
-		case 'q':
-			break MainLoop
-		case 'h':
-			dir.SetShowHidden(!dir.ShowHidden)
+			switch ev.Ch {
+			case 'q':
+				break MainLoop
+			case 'h':
+				dir.SetShowHidden(!dir.ShowHidden)
 
-		}
+			}
 
 		case termbox.EventResize:
 		}
