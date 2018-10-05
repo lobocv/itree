@@ -18,12 +18,14 @@ Screen drawing methods
 
 
 type Screen struct {
+	dir *DirContext
 	Width, Height int
+	helpOpen bool
 }
 
-func GetScreen() Screen {
+func GetScreen(dir *DirContext) Screen {
 	w, h := termbox.Size()
-	return Screen{w, h}
+	return Screen{dir, w, h, false}
 }
 
 func (s* Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
@@ -33,15 +35,15 @@ func (s* Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
-func (s* Screen) PrintDirContents(dir DirContext, x, y int) error {
-	width, height := termbox.Size()
-	width = width
-	s.Print(x, y, termbox.ColorRed, termbox.ColorDefault, dir.AbsPath)
-	for yoffset, f := range dir.Files {
+func (s* Screen) PrintDirContents() error {
+	_, height := termbox.Size()
+	var x, y int
+	s.Print(x, y, termbox.ColorRed, termbox.ColorDefault, s.dir.AbsPath)
+	for yoffset, f := range s.dir.Files {
 		var color termbox.Attribute
 		var itemname string
 
-		if dir.FileIdx == yoffset {
+		if s.dir.FileIdx == yoffset {
 			color =  termbox.ColorCyan
 		} else {
 			if f.IsDir() {
@@ -62,6 +64,22 @@ func (s* Screen) PrintDirContents(dir DirContext, x, y int) error {
 
 	return nil
 }
+
+func (s* Screen) ToggleHelp() {
+	s.helpOpen = ! s.helpOpen
+}
+
+func (s* Screen) Draw() {
+	s.ClearScreen()
+	if s.helpOpen {
+		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "itree - An interactive tree application for file system navigation.")
+		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, "h - Toggle hidden files and folders.")
+	} else {
+		s.PrintDirContents()
+	}
+	termbox.Flush()
+}
+
 
 func (d* Screen) ClearScreen() {
 	termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
@@ -182,16 +200,15 @@ func main() {
 		panic("Cannot get absolute directory.")
 	}
 
-	screen := GetScreen()
 
 	dir := DirContext{}
 	dir.SetDirectory(cwd)
+	screen := GetScreen(&dir)
 
 MainLoop:
 	for {
-		screen.ClearScreen()
-		screen.PrintDirContents(dir, 0, 1)
-		termbox.Flush()
+
+		screen.Draw()
 
 		ev := termbox.PollEvent()
 
@@ -209,6 +226,9 @@ MainLoop:
 				dir.Ascend()
 			case termbox.KeyArrowRight:
 				dir.Descend()
+			case termbox.KeyCtrlH:
+				screen.ToggleHelp()
+
 			}
 
 		switch ev.Ch {
