@@ -154,6 +154,9 @@ func (s *Screen) Draw(upperLevels int) {
 	case Help:
 		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "itree - An interactive tree application for file system navigation.")
 		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, "h - Toggle hidden files and folders.")
+		s.Print(0, 3, termbox.ColorWhite, termbox.ColorDefault, "e - Log2 skip up.")
+		s.Print(0, 4, termbox.ColorWhite, termbox.ColorDefault, "d - Log2 skip down.")
+		s.Print(0, 5, termbox.ColorWhite, termbox.ColorDefault, "c - Toggle position between first and last file.")
 	case Directory:
 		s.PrintDirContents(upperLevels)
 	case Search:

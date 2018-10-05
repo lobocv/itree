@@ -9,6 +9,22 @@ import (
 	"path/filepath"
 )
 
+func Min(i, j int) int {
+	if i > j {
+		return j
+	} else {
+		return i
+	}
+}
+
+func Max(i, j int) int {
+	if i > j {
+		return i
+	} else {
+		return j
+	}
+}
+
 func main() {
 	var inputmode = false
 	var err error
@@ -91,18 +107,37 @@ MainLoop:
 					inputmode = false
 				}
 			}
+		}
 
-			switch ev.Ch {
-			case 'q':
-				break MainLoop
-			case 'h':
-				dir.SetShowHidden(!dir.ShowHidden)
+		switch ev.Ch {
+		case 'q':
+			break MainLoop
+		case 'h':
+			dir.SetShowHidden(!dir.ShowHidden)
+		case 'a':
+			dir = new(ctx.Directory)
+			dir.SetDirectory(cwd)
+		case 'e':
+			// Move up by half the distance between the selected file
+			// Always move at least 2 steps
+			by := -Max(2, dir.FileIdx/2)
+			dir.MoveSelector(by)
+		case 'd':
+			// Move down by half the distance between the selected file
+			// Always move at least 2 steps
+			by := Max(2, (len(dir.Files)-dir.FileIdx)/2)
+			dir.MoveSelector(by)
+		case 'c':
+			// Toggle position between first and last file in the directory
+			if dir.FileIdx == 0 {
+				dir.FileIdx = len(dir.Files) - 1
+			} else {
+				dir.FileIdx = 0
 			}
 
-		case termbox.EventResize:
 		}
-	}
+		// We must print the directory we end up in so that we can change to it
+		fmt.Print(dir.AbsPath)
 
-	// We must print the directory we end up in so that we can change to it
-	fmt.Print(dir.AbsPath)
+	}
 }
