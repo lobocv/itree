@@ -17,17 +17,26 @@ Screen drawing methods
 */
 
 
-func tbprint(x, y int, fg, bg termbox.Attribute, msg string) {
+type Screen struct {
+	Width, Height int
+}
+
+func GetScreen() Screen {
+	w, h := termbox.Size()
+	return Screen{w, h}
+}
+
+func (s* Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	for _, c := range msg {
 		termbox.SetCell(x, y, c, fg, bg)
 		x++
 	}
 }
 
-func printdircontents(dir DirContext, x, y int) error {
+func (s* Screen) PrintDirContents(dir DirContext, x, y int) error {
 	width, height := termbox.Size()
 	width = width
-	tbprint(x, y, termbox.ColorRed, termbox.ColorDefault, dir.AbsPath)
+	s.Print(x, y, termbox.ColorRed, termbox.ColorDefault, dir.AbsPath)
 	for yoffset, f := range dir.Files {
 		var color termbox.Attribute
 		var itemname string
@@ -47,14 +56,14 @@ func printdircontents(dir DirContext, x, y int) error {
 		row := (y + yoffset+1) % height
 		col := int((y + yoffset+1) / height)
 		if row < height {
-			tbprint(col * 20, row, color, termbox.ColorDefault, "   " + itemname)
+			s.Print(col * 20, row, color, termbox.ColorDefault, "   " + itemname)
 		}
 	}
 
 	return nil
 }
 
-func ClearScreen() {
+func (d* Screen) ClearScreen() {
 	termbox.Clear(termbox.ColorDefault,termbox.ColorDefault)
 }
 
@@ -69,6 +78,7 @@ type DirContext struct {
 	ShowHidden bool
 }
 
+// Methods for filtering files by directory, then file
 type OSFiles []os.FileInfo
 func (f OSFiles) Len() int { return len(f)}
 func (f OSFiles) Swap(i, j int) { f[i], f[j] = f[j], f[i]}
@@ -171,12 +181,16 @@ func main() {
 	if err != nil {
 		panic("Cannot get absolute directory.")
 	}
+
+	screen := GetScreen()
+
 	dir := DirContext{}
 	dir.SetDirectory(cwd)
 
 MainLoop:
 	for {
-		printdircontents(dir, 0, 1)
+		screen.ClearScreen()
+		screen.PrintDirContents(dir, 0, 1)
 		termbox.Flush()
 
 		ev := termbox.PollEvent()
@@ -189,16 +203,12 @@ MainLoop:
 
 			case termbox.KeyArrowUp:
 				dir.MoveSelector(-1)
-				ClearScreen()
 			case termbox.KeyArrowDown:
 				dir.MoveSelector(1)
-				ClearScreen()
 			case termbox.KeyArrowLeft:
 				dir.Ascend()
-				ClearScreen()
 			case termbox.KeyArrowRight:
 				dir.Descend()
-				ClearScreen()
 			}
 
 		switch ev.Ch {
@@ -206,12 +216,11 @@ MainLoop:
 			break MainLoop
 		case 'h':
 			dir.SetShowHidden(!dir.ShowHidden)
-			ClearScreen()
+
 		}
 
 		case termbox.EventResize:
 		}
-		termbox.Flush()
 	}
 
 	// We must print the directory we end up in so that we can change to it
