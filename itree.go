@@ -7,6 +7,7 @@ import (
 	"github.com/nsf/termbox-go"
 	"os"
 	"path/filepath"
+	"path"
 )
 
 func Min(i, j int) int {
@@ -138,5 +139,14 @@ MainLoop:
 		}
 	}
 	// We must print the directory we end up in so that we can change to it
-	fmt.Print(dir.AbsPath)
+	// If we end up selecting a directory item, then change into that directory,
+	// If we end up on a file item, change into that files directory
+	var finalPath string
+	currentItem, err := dir.CurrentFile()
+	if err == nil && currentItem.IsDir() {
+		finalPath = path.Join(dir.AbsPath, currentItem.Name())
+	} else {
+		finalPath = dir.AbsPath
+	}
+	fmt.Print(finalPath)
 }

@@ -62,6 +62,14 @@ func (d *Directory) SetDirectory(path string) error {
 	return nil
 }
 
+func (d* Directory) CurrentFile() (os.FileInfo, error) {
+	if len(d.Files) == 0 {
+		return nil, errors.New("No item selected.")
+	} else {
+		return d.Files[d.FileIdx], nil
+	}
+}
+
 func (d *Directory) Ascend() (*Directory, error) {
 	newpath := path.Dir(d.AbsPath)
 	if d.Parent != nil {
