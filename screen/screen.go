@@ -77,7 +77,7 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 
 			// Determine the color of the currently printing directory item
 			var color termbox.Attribute
-			if dir.FileIdx == ii {
+			if dir.FileIdx == ii && level == len(dirlist)-1 {
 				color = termbox.ColorCyan
 			} else {
 				if f.IsDir() {
