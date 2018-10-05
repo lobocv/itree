@@ -17,15 +17,22 @@ Screen drawing methods
 */
 
 
+type ScreenState int
+const (
+	Directory ScreenState = iota
+	Help
+	Search
+)
+
 type Screen struct {
 	dir *DirContext
 	Width, Height int
-	helpOpen bool
+	state ScreenState
 }
 
 func GetScreen(dir *DirContext) Screen {
 	w, h := termbox.Size()
-	return Screen{dir, w, h, false}
+	return Screen{dir, w, h, Directory}
 }
 
 func (s* Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
@@ -65,18 +72,24 @@ func (s* Screen) PrintDirContents() error {
 	return nil
 }
 
-func (s* Screen) ToggleHelp() {
-	s.helpOpen = ! s.helpOpen
+
+func (s* Screen) GetState() ScreenState {
+	return s.state
+}
+func (s* Screen) SetState(state ScreenState) {
+	s.state = state
 }
 
 func (s* Screen) Draw() {
 	s.ClearScreen()
-	if s.helpOpen {
+	switch s.state {
+	case Help:
 		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "itree - An interactive tree application for file system navigation.")
 		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, "h - Toggle hidden files and folders.")
-	} else {
+	case Directory:
 		s.PrintDirContents()
 	}
+		
 	termbox.Flush()
 }
 
@@ -227,7 +240,12 @@ MainLoop:
 			case termbox.KeyArrowRight:
 				dir.Descend()
 			case termbox.KeyCtrlH:
-				screen.ToggleHelp()
+				if screen.GetState() != Help {
+					screen.SetState(Help)
+					} else {
+					screen.SetState(Directory)
+				}
+
 
 			}
 
