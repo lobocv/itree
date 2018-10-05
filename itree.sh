@@ -1,5 +1,6 @@
 #!/bin/bash
 
+source ${HOME}/.config/itree/preferences
 
 CWD=$(dirname $(readlink -e $0))
 if [ -f $CWD/itree.go ]; then
@@ -9,3 +10,7 @@ else
 fi
 echo "Changing directory to $DIR"
 cd $DIR
+
+if [ "$PrintDirOnExit" = "1" ]; then
+	ls
+fi

@@ -3,6 +3,7 @@
 CWD=$(dirname $(readlink -e $0))
 INSTALL_PATH=/usr/local/bin/itree.sh
 BIN_INSTALL_PATH=/usr/local/bin/itree2
+PREFERENCES_FILE="${HOME}/.config/itree/preferences"
 CUR_SHELL=$(basename $SHELL)
 ITREE_ALIAS="alias itree=\". itree.sh\""
 GOEXEC=$(which go)
@@ -42,4 +43,5 @@ else
     echo "${ITREE_ALIAS}" >> ${RC}
 fi
 
-
+mkdir -p $(dirname ${PREFERENCES_FILE}) 2>/dev/null
+echo "PrintDirOnExit=0" > ${PREFERENCES_FILE}
