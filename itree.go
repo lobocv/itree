@@ -10,20 +10,26 @@ import (
 	"path"
 )
 
-func Min(i, j int) int {
-	if i > j {
-		return j
-	} else {
-		return i
-	}
-}
-
 func Max(i, j int) int {
 	if i > j {
 		return i
 	} else {
 		return j
 	}
+}
+
+// Move up by half the distance between the selected file
+// Always move at least 2 steps
+func JumpUp(dir *ctx.Directory) {
+	by := -Max(2, dir.FileIdx/2)
+	dir.MoveSelector(by)
+}
+
+// Move down by half the distance between the selected file
+// Always move at least 2 steps
+func JumpDown(dir *ctx.Directory) {
+	by := Max(2, (len(dir.Files)-dir.FileIdx)/2)
+	dir.MoveSelector(by)
 }
 
 func main() {
@@ -88,6 +94,10 @@ MainLoop:
 				if nextdir != nil && err == nil {
 					dir = nextdir
 				}
+			case termbox.KeyPgup:
+				JumpUp(dir)
+			case termbox.KeyPgdn:
+				JumpDown(dir)
 			case termbox.KeyArrowRight:
 				nextdir, err := dir.Descend()
 				if nextdir != nil && err == nil {
@@ -119,15 +129,9 @@ MainLoop:
 			dir = new(ctx.Directory)
 			dir.SetDirectory(cwd)
 		case 'e':
-			// Move up by half the distance between the selected file
-			// Always move at least 2 steps
-			by := -Max(2, dir.FileIdx/2)
-			dir.MoveSelector(by)
+			JumpUp(dir)
 		case 'd':
-			// Move down by half the distance between the selected file
-			// Always move at least 2 steps
-			by := Max(2, (len(dir.Files)-dir.FileIdx)/2)
-			dir.MoveSelector(by)
+			JumpDown(dir)
 		case 'c':
 			// Toggle position between first and last file in the directory
 			if dir.FileIdx == 0 {
