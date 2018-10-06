@@ -47,11 +47,11 @@ func (d *Directory) SetDirectory(path string) error {
 				filtered = append(filtered, f)
 			}
 		}
-		// Sort by directory
-		sort.Sort(OSFiles(filtered))
 	} else {
 		filtered = files[:]
 	}
+	// Sort by directory
+	sort.Sort(OSFiles(filtered))
 
 	// Check that the index hasn't gone out of bounds
 	d.Files = filtered
