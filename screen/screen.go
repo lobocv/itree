@@ -22,14 +22,12 @@ const (
 
 type Screen struct {
 	dir           *ctx.Directory
-	Width, Height int
 	SearchString  []rune
 	state         ScreenState
 }
 
 func GetScreen(dir *ctx.Directory) Screen {
-	w, h := termbox.Size()
-	return Screen{dir, w, h, make([]rune, 0, 100), Directory}
+	return Screen{dir, make([]rune, 0, 100), Directory}
 }
 
 func (s *Screen) SetDirectory(dir *ctx.Directory) {
@@ -48,6 +46,8 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
 	var scrollOffsety int			   // Offset to scroll the visible directory text by
+
+	screenWidth, screenHeight := termbox.Size()
 
 	// Print the current path
 	s.Print(levelOffsetX, levelOffsetY, termbox.ColorRed, termbox.ColorDefault, s.dir.AbsPath)
@@ -70,11 +70,11 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 	for _, dir := range dirlist {
 		scrollOffsety += dir.FileIdx
 	}
-	scrollOffsety -= s.Height - levelOffsetY
+	scrollOffsety -= screenHeight - levelOffsetY
 	if scrollOffsety < 0 {
 		scrollOffsety = 0
 	} else {
-		pagejump := float64(s.Height) / 5
+		pagejump := float64(screenHeight) / 5
 		scrollOffsety = int(math.Ceil(float64(scrollOffsety) / pagejump) * pagejump)
 	}
 
@@ -138,6 +138,10 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 				// The first item is connected to the parent directory with a line
 				// shift the position left to account for this line
 				y -= stretch
+			}
+			if y + len(line.String()) > screenWidth && upperLevels > 0 {
+				s.ClearScreen()
+				return s.PrintDirContents(upperLevels-1)
 			}
 			s.Print(y, x, color, termbox.ColorDefault, line.String())
 		}
