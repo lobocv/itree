@@ -143,7 +143,7 @@ MainLoop:
 	// If we end up on a file item, change into that files directory
 	var finalPath string
 	currentItem, err := dir.CurrentFile()
-	if err == nil && currentItem.IsDir() {
+	if err == nil && currentItem.IsDir() && os.Getenv("EnterLastSelected") == "1" {
 		finalPath = path.Join(dir.AbsPath, currentItem.Name())
 	} else {
 		finalPath = dir.AbsPath

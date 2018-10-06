@@ -10,6 +10,7 @@ GOEXEC=$(which go)
 
 
 echo "Detected shell $CUR_SHELL"
+continue="0"
 while ! [[ "$continue" =~ (Y|y|yes|N|n|no) ]]; do
     read -p "Do you want to install itree for $CUR_SHELL? [Y/n]" continue
 done
@@ -44,4 +45,5 @@ else
 fi
 
 mkdir -p $(dirname ${PREFERENCES_FILE}) 2>/dev/null
-echo "PrintDirOnExit=0" > ${PREFERENCES_FILE}
+echo "export PrintDirOnExit=0" > ${PREFERENCES_FILE}
+echo "export EnterLastSelected=0" >> ${PREFERENCES_FILE}
