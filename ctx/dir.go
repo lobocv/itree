@@ -29,7 +29,6 @@ func (f OSFiles) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 func (f OSFiles) Less(i, j int) bool { return f[i].IsDir() }
 
 func (d *Directory) SetDirectory(path string) error {
-	//var err error
 	if _, err := os.Stat(path); err != nil {
 		return err
 	}

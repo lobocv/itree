@@ -5,6 +5,7 @@ import (
 	"github.com/lobocv/itree/ctx"
 	"github.com/nsf/termbox-go"
 	"strings"
+	"math"
 )
 
 /*
@@ -46,6 +47,7 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 	var levelOffsetX, levelOffsetY int // Draw position offset
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
+	var scrollOffsety int			   // Offset to scroll the visible directory text by
 
 	// Print the current path
 	s.Print(levelOffsetX, levelOffsetY, termbox.ColorRed, termbox.ColorDefault, s.dir.AbsPath)
@@ -62,6 +64,19 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 		next = next.Parent
 	}
 	dirlist = append(dirlist, s.dir)
+
+	// Determine the scrolling offset
+	scrollOffsety = levelOffsetY
+	for _, dir := range dirlist {
+		scrollOffsety += dir.FileIdx
+	}
+	scrollOffsety -= s.Height - levelOffsetY
+	if scrollOffsety < 0 {
+		scrollOffsety = 0
+	} else {
+		pagejump := float64(s.Height) / 5
+		scrollOffsety = int(math.Ceil(float64(scrollOffsety) / pagejump) * pagejump)
+	}
 
 	// Recurse through the directory list, drawing a tree structure
 	for level, dir := range dirlist {
@@ -117,7 +132,7 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 			}
 
 			// Calculate the draw position
-			x := levelOffsetY + ii
+			x := levelOffsetY + ii - scrollOffsety
 			y := levelOffsetX
 			if ii == 0 {
 				// The first item is connected to the parent directory with a line
