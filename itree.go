@@ -32,15 +32,26 @@ func JumpDown(dir *ctx.Directory) {
 	dir.MoveSelector(by)
 }
 
+
+func getDirView(dir *ctx.Directory, upperLevels int ) ctx.DirView {
+
+	// Create a slice of the directory chain containing upperLevels number of parents
+	dirlist := make([]*ctx.Directory, 0, 1+upperLevels)
+	dirlist = append(dirlist, dir)
+	next := dir.Parent
+	for ii := 0; next != nil; ii++ {
+		if ii >= upperLevels {
+			break
+		}
+		dirlist = append([]*ctx.Directory{next}, dirlist...)
+		next = next.Parent
+	}
+	return dirlist
+}
+
 func main() {
 	var inputmode = false
 	var err error
-	err = termbox.Init()
-
-	if err != nil {
-		panic(err)
-	}
-	defer termbox.Close()
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -51,14 +62,35 @@ func main() {
 		panic("Cannot get absolute directory.")
 	}
 
-	dir := new(ctx.Directory)
-	dir.SetDirectory(cwd)
-	s := screen.GetScreen(dir)
+	pathlist := ctx.GetPathComponents(cwd)
+	var curDir, prevDir, nextDir *ctx.Directory
+	for _, subdir := range pathlist {
+
+		nextDir = new(ctx.Directory)
+		nextDir.SetDirectory(subdir)
+		nextDir.Parent = prevDir
+		if prevDir != nil {
+			prevDir.Child = nextDir
+		}
+		prevDir = nextDir
+	}
+	// Set the current directory context
+	curDir = nextDir
+
+	// Initialize the library that draws to the terminal
+	err = termbox.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer termbox.Close()
+
+	s := screen.GetScreen()
 
 MainLoop:
 	for {
-		s.SetDirectory(dir)
-		s.Draw(4)
+		// A portion of the full path that we can draw
+		dirView := getDirView(curDir, 3)
+		s.Draw(dirView)
 
 		ev := termbox.PollEvent()
 		if inputmode {
@@ -67,7 +99,7 @@ MainLoop:
 				s.SearchString = s.SearchString[:0]
 				s.SetState(screen.Directory)
 			} else if ev.Key == termbox.KeyEnter {
-				dir.FilterContents(string(s.SearchString))
+				curDir.FilterContents(string(s.SearchString))
 				inputmode = false
 				s.SetState(screen.Directory)
 			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace {
@@ -86,36 +118,28 @@ MainLoop:
 			case termbox.KeyEsc, termbox.KeyCtrlC:
 				break MainLoop
 			case termbox.KeyArrowUp:
-				dir.MoveSelector(-1)
+				curDir.MoveSelector(-1)
 			case termbox.KeyArrowDown:
-				dir.MoveSelector(1)
+				curDir.MoveSelector(1)
 			case termbox.KeyArrowLeft:
-				nextdir, err := dir.Ascend()
+				nextdir, err := curDir.Ascend()
 				if nextdir != nil && err == nil {
-					dir = nextdir
+					curDir = nextdir
+				}
+			case termbox.KeyArrowRight:
+				nextdir, err := curDir.Descend()
+				if nextdir != nil && err == nil {
+					curDir = nextdir
 				}
 			case termbox.KeyPgup:
-				JumpUp(dir)
+				JumpUp(curDir)
 			case termbox.KeyPgdn:
-				JumpDown(dir)
-			case termbox.KeyArrowRight:
-				nextdir, err := dir.Descend()
-				if nextdir != nil && err == nil {
-					dir = nextdir
-				}
+				JumpDown(curDir)
 			case termbox.KeyCtrlH:
 				if s.GetState() != screen.Help {
 					s.SetState(screen.Help)
 				} else {
 					s.SetState(screen.Directory)
-				}
-			case termbox.KeyCtrlS:
-				if s.GetState() != screen.Search {
-					s.SetState(screen.Search)
-					inputmode = true
-				} else {
-					s.SetState(screen.Directory)
-					inputmode = false
 				}
 			}
 		}
@@ -123,21 +147,29 @@ MainLoop:
 		switch ev.Ch {
 		case 'q':
 			break MainLoop
+		case '/':
+			if s.GetState() != screen.Search {
+				s.SetState(screen.Search)
+				inputmode = true
+			} else {
+				s.SetState(screen.Directory)
+				inputmode = false
+			}
 		case 'h':
-			dir.SetShowHidden(!dir.ShowHidden)
+			curDir.SetShowHidden(!curDir.ShowHidden)
 		case 'a':
-			dir = new(ctx.Directory)
-			dir.SetDirectory(cwd)
+			curDir = new(ctx.Directory)
+			curDir.SetDirectory(cwd)
 		case 'e':
-			JumpUp(dir)
+			JumpUp(curDir)
 		case 'd':
-			JumpDown(dir)
+			JumpDown(curDir)
 		case 'c':
 			// Toggle position between first and last file in the directory
-			if dir.FileIdx == 0 {
-				dir.FileIdx = len(dir.Files) - 1
+			if curDir.FileIdx == 0 {
+				curDir.FileIdx = len(curDir.Files) - 1
 			} else {
-				dir.FileIdx = 0
+				curDir.FileIdx = 0
 			}
 
 		}
@@ -146,11 +178,12 @@ MainLoop:
 	// If we end up selecting a directory item, then change into that directory,
 	// If we end up on a file item, change into that files directory
 	var finalPath string
-	currentItem, err := dir.CurrentFile()
+	//curDir = dirView[len(dirView)]
+	currentItem, err := curDir.CurrentFile()
 	if err == nil && currentItem.IsDir() && os.Getenv("EnterLastSelected") == "1" {
-		finalPath = path.Join(dir.AbsPath, currentItem.Name())
+		finalPath = path.Join(curDir.AbsPath, currentItem.Name())
 	} else {
-		finalPath = dir.AbsPath
+		finalPath = curDir.AbsPath
 	}
 	fmt.Print(finalPath)
 }

@@ -7,7 +7,28 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"path/filepath"
 )
+
+
+
+func GetPathComponents(path string) []string {
+	components := make([]string, 0, strings.Count(path, string(os.PathSeparator)))
+	dir := path
+	ok := true
+	for ok {
+		// add to front of slice
+		if dir != "/" && strings.HasSuffix(dir, "/") {
+			dir = dir[:len(dir)-1]
+		}
+		components = append([]string{dir}, components...)
+		dir, _ = filepath.Split(dir)
+		ok = dir != "/"
+	}
+	components = append([]string{"/"}, components...)
+	return components
+}
+
 
 /*
 Directory methods
@@ -19,7 +40,10 @@ type Directory struct {
 	FileIdx    int
 	ShowHidden bool
 	Parent     *Directory
+	Child      *Directory
 }
+
+type DirView = []*Directory
 
 // Methods for filtering files by directory, then file
 type OSFiles []os.FileInfo
@@ -70,26 +94,7 @@ func (d* Directory) CurrentFile() (os.FileInfo, error) {
 }
 
 func (d *Directory) Ascend() (*Directory, error) {
-	newpath := path.Dir(d.AbsPath)
-	if d.Parent != nil {
-		return d.Parent, nil
-	} else {
-		parent := new(Directory)
-
-		err := parent.SetDirectory(newpath)
-		if err != nil {
-			return nil, err
-		}
-
-		for idx, f := range parent.Files {
-			if f.Name() == newpath {
-				parent.FileIdx = idx
-				break
-			}
-		}
-		return parent, err
-	}
-
+	return d.Parent, nil
 }
 
 func (d *Directory) Descend() (*Directory, error) {
@@ -102,6 +107,7 @@ func (d *Directory) Descend() (*Directory, error) {
 		newpath := path.Join(d.AbsPath, f.Name())
 		child.SetDirectory(newpath)
 		child.Parent = d
+		d.Child = child
 		return child, nil
 	} else {
 		return nil, errors.New("Cannot enter non-directory.")
@@ -123,12 +129,12 @@ func (d *Directory) SetShowHidden(v bool) {
 	d.SetDirectory(d.AbsPath)
 }
 
-func (d *Directory) FilterContents(searchstring string) {
-	filtered := d.Files[:0]
+func (d *Directory) FilterContents(searchstring string) []os.FileInfo {
+	var filtered  = make([]os.FileInfo, 0, len(d.Files))
 	for _, f := range d.Files {
 		if strings.Contains(f.Name(), searchstring) {
 			filtered = append(filtered, f)
 		}
 	}
-	d.Files = filtered
+	return filtered
 }

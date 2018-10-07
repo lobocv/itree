@@ -21,17 +21,12 @@ const (
 )
 
 type Screen struct {
-	dir           *ctx.Directory
 	SearchString  []rune
 	state         ScreenState
 }
 
-func GetScreen(dir *ctx.Directory) Screen {
-	return Screen{dir, make([]rune, 0, 100), Directory}
-}
-
-func (s *Screen) SetDirectory(dir *ctx.Directory) {
-	s.dir = dir
+func GetScreen() Screen {
+	return Screen{make([]rune, 0, 100), Directory}
 }
 
 func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
@@ -41,7 +36,7 @@ func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
-func (s *Screen) PrintDirContents(upperLevels int) error {
+func (s *Screen) PrintDirContents(dirlist ctx.DirView) error {
 	var levelOffsetX, levelOffsetY int // Draw position offset
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
@@ -50,20 +45,13 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 	screenWidth, screenHeight := termbox.Size()
 
 	// Print the current path
-	s.Print(levelOffsetX, levelOffsetY, termbox.ColorRed, termbox.ColorDefault, s.dir.AbsPath)
+	s.Print(levelOffsetX, levelOffsetY, termbox.ColorRed, termbox.ColorDefault, dirlist[len(dirlist)-1].AbsPath)
 	levelOffsetY += 2
-
-	// Create a slice of the directory chain containing upperLevels number of parents
-	dirlist := make([]*ctx.Directory, 0, 1+upperLevels)
-	next := s.dir.Parent
-	for ii := 0; next != nil; ii++ {
-		if ii >= upperLevels {
-			break
-		}
-		dirlist = append([]*ctx.Directory{next}, dirlist...)
-		next = next.Parent
+	if s.state == Search {
+		instruction := "Enter a search string:"
+		s.Print(0, 1, termbox.ColorWhite, termbox.ColorDefault, instruction)
+		s.Print(len(instruction)+2, 1, termbox.ColorWhite, termbox.ColorDefault, string(s.SearchString))
 	}
-	dirlist = append(dirlist, s.dir)
 
 	// Determine the scrolling offset
 	scrollOffsety = levelOffsetY
@@ -139,9 +127,9 @@ func (s *Screen) PrintDirContents(upperLevels int) error {
 				// shift the position left to account for this line
 				y -= stretch
 			}
-			if y + len(line.String()) > screenWidth && upperLevels > 0 {
+			if y + len(line.String()) > screenWidth && len(dirlist) > 1 {
 				s.ClearScreen()
-				return s.PrintDirContents(upperLevels-1)
+				return s.PrintDirContents(dirlist[1:])
 			}
 			s.Print(y, x, color, termbox.ColorDefault, line.String())
 		}
@@ -167,7 +155,7 @@ func (s *Screen) SetState(state ScreenState) {
 	s.state = state
 }
 
-func (s *Screen) Draw(upperLevels int) {
+func (s *Screen) Draw(view ctx.DirView) {
 	s.ClearScreen()
 	switch s.state {
 	case Help:
@@ -177,10 +165,10 @@ func (s *Screen) Draw(upperLevels int) {
 		s.Print(0, 4, termbox.ColorWhite, termbox.ColorDefault, "d - Log2 skip down.")
 		s.Print(0, 5, termbox.ColorWhite, termbox.ColorDefault, "c - Toggle position between first and last file.")
 	case Directory:
-		s.PrintDirContents(upperLevels)
+		s.PrintDirContents(view)
 	case Search:
-		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "Enter a search string:")
-		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, string(s.SearchString))
+		s.PrintDirContents(view)
+
 	}
 
 	termbox.Flush()
