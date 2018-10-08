@@ -47,3 +47,4 @@ fi
 mkdir -p $(dirname ${PREFERENCES_FILE}) 2>/dev/null
 echo "export PrintDirOnExit=0" > ${PREFERENCES_FILE}
 echo "export EnterLastSelected=0" >> ${PREFERENCES_FILE}
+echo "export MaxUpperLevels=4" >> ${PREFERENCES_FILE}

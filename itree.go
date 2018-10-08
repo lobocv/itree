@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"strings"
 	"errors"
+	"strconv"
 )
 
 func max(i, j int) int {
@@ -188,7 +189,10 @@ func (s *Screen) Draw() {
 		s.Print(0, 4, termbox.ColorWhite, termbox.ColorDefault, "d - Log2 skip down.")
 		s.Print(0, 5, termbox.ColorWhite, termbox.ColorDefault, "c - Toggle position between first and last file.")
 	case Directory:
-		upperLevels := 4
+		upperLevels, err := strconv.Atoi(os.Getenv("MaxUpperLevels"))
+		if err != nil {
+			upperLevels = 3
+		}
 		for {
 			s.ClearScreen()
 			// Print the current path
