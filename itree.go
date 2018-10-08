@@ -88,28 +88,36 @@ func main() {
 
 MainLoop:
 	for {
+		s.ClearScreen()
+		// Print the current path
+		s.Print(0, 0, termbox.ColorRed, termbox.ColorDefault, curDir.AbsPath)
+		if inputmode {
+			instruction := "Enter a search string:"
+			s.Print(0, 1, termbox.ColorWhite, termbox.ColorDefault, instruction)
+			s.Print(len(instruction)+2, 1, termbox.ColorWhite, termbox.ColorDefault, string(s.SearchString))
+		}
+
 		// A portion of the full path that we can draw
 		dirView := getDirView(curDir, 3)
-		s.Draw(dirView)
+		s.Draw(0, 2, dirView)
 
 		ev := termbox.PollEvent()
 		if inputmode {
 			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
 				inputmode = false
 				s.SearchString = s.SearchString[:0]
-				s.SetState(screen.Directory)
-			} else if ev.Key == termbox.KeyEnter {
 				curDir.FilterContents(string(s.SearchString))
-				inputmode = false
 				s.SetState(screen.Directory)
 			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace {
 				if len(s.SearchString) > 0 {
 					s.SearchString = s.SearchString[:len(s.SearchString)-1]
+					curDir.FilterContents(string(s.SearchString))
 				}
-			} else {
+			} else if ev.Ch != 0 {
 				s.SearchString = append(s.SearchString, ev.Ch)
+				curDir.FilterContents(string(s.SearchString))
 			}
-			continue MainLoop
+			//continue MainLoop
 		}
 
 		switch ev.Type {
@@ -122,11 +130,17 @@ MainLoop:
 			case termbox.KeyArrowDown:
 				curDir.MoveSelector(1)
 			case termbox.KeyArrowLeft:
+				inputmode = false
+				s.SearchString = s.SearchString[:0]
+				curDir.FilterContents(string(s.SearchString))
 				nextdir, err := curDir.Ascend()
 				if nextdir != nil && err == nil {
 					curDir = nextdir
 				}
 			case termbox.KeyArrowRight:
+				inputmode = false
+				s.SearchString = s.SearchString[:0]
+				curDir.FilterContents(string(s.SearchString))
 				nextdir, err := curDir.Descend()
 				if nextdir != nil && err == nil {
 					curDir = nextdir
@@ -148,13 +162,8 @@ MainLoop:
 		case 'q':
 			break MainLoop
 		case '/':
-			if s.GetState() != screen.Search {
-				s.SetState(screen.Search)
-				inputmode = true
-			} else {
-				s.SetState(screen.Directory)
-				inputmode = false
-			}
+			inputmode = true
+			s.SearchString = s.SearchString[:0]
 		case 'h':
 			curDir.SetShowHidden(!curDir.ShowHidden)
 		case 'a':

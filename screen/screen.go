@@ -17,7 +17,6 @@ type ScreenState int
 const (
 	Directory ScreenState = iota
 	Help
-	Search
 )
 
 type Screen struct {
@@ -36,22 +35,16 @@ func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
-func (s *Screen) PrintDirContents(dirlist ctx.DirView) error {
+func (s *Screen) PrintDirContents(x, y int, dirlist ctx.DirView) error {
 	var levelOffsetX, levelOffsetY int // Draw position offset
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
 	var scrollOffsety int			   // Offset to scroll the visible directory text by
 
-	screenWidth, screenHeight := termbox.Size()
+	_, screenHeight := termbox.Size()
 
-	// Print the current path
-	s.Print(levelOffsetX, levelOffsetY, termbox.ColorRed, termbox.ColorDefault, dirlist[len(dirlist)-1].AbsPath)
-	levelOffsetY += 2
-	if s.state == Search {
-		instruction := "Enter a search string:"
-		s.Print(0, 1, termbox.ColorWhite, termbox.ColorDefault, instruction)
-		s.Print(len(instruction)+2, 1, termbox.ColorWhite, termbox.ColorDefault, string(s.SearchString))
-	}
+	levelOffsetX = x
+	levelOffsetY = y
 
 	// Determine the scrolling offset
 	scrollOffsety = levelOffsetY
@@ -83,7 +76,9 @@ func (s *Screen) PrintDirContents(dirlist ctx.DirView) error {
 			if dir.FileIdx == ii && level == len(dirlist)-1 {
 				color = termbox.ColorCyan
 			} else {
-				if f.IsDir() {
+				if _, ok := dir.FilteredFiles[ii]; ok {
+					color = termbox.ColorGreen
+				} else if f.IsDir() {
 					color = termbox.ColorYellow
 				} else {
 					color = termbox.ColorWhite
@@ -127,10 +122,6 @@ func (s *Screen) PrintDirContents(dirlist ctx.DirView) error {
 				// shift the position left to account for this line
 				y -= stretch
 			}
-			if y + len(line.String()) > screenWidth && len(dirlist) > 1 {
-				s.ClearScreen()
-				return s.PrintDirContents(dirlist[1:])
-			}
 			s.Print(y, x, color, termbox.ColorDefault, line.String())
 		}
 
@@ -155,8 +146,7 @@ func (s *Screen) SetState(state ScreenState) {
 	s.state = state
 }
 
-func (s *Screen) Draw(view ctx.DirView) {
-	s.ClearScreen()
+func (s *Screen) Draw(x, y int, view ctx.DirView) {
 	switch s.state {
 	case Help:
 		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "itree - An interactive tree application for file system navigation.")
@@ -165,10 +155,7 @@ func (s *Screen) Draw(view ctx.DirView) {
 		s.Print(0, 4, termbox.ColorWhite, termbox.ColorDefault, "d - Log2 skip down.")
 		s.Print(0, 5, termbox.ColorWhite, termbox.ColorDefault, "c - Toggle position between first and last file.")
 	case Directory:
-		s.PrintDirContents(view)
-	case Search:
-		s.PrintDirContents(view)
-
+		s.PrintDirContents(x, y, view)
 	}
 
 	termbox.Flush()

@@ -35,12 +35,13 @@ Directory methods
 */
 
 type Directory struct {
-	AbsPath    string
-	Files      []os.FileInfo
-	FileIdx    int
-	ShowHidden bool
-	Parent     *Directory
-	Child      *Directory
+	AbsPath       string
+	Files         []os.FileInfo
+	FilteredFiles map[int]os.FileInfo
+	FileIdx       int
+	ShowHidden    bool
+	Parent        *Directory
+	Child         *Directory
 }
 
 type DirView = []*Directory
@@ -115,13 +116,31 @@ func (d *Directory) Descend() (*Directory, error) {
 }
 
 func (d *Directory) MoveSelector(dy int) {
-	idx := d.FileIdx + dy
-	if idx >= len(d.Files) {
-		idx = len(d.Files) - 1
-	} else if idx < 0 {
-		idx = 0
+	if len(d.FilteredFiles) == 0 {
+		// Move the index up one, wrap around if necessary
+		idx := d.FileIdx + dy
+		if idx >= len(d.Files) {
+			idx = len(d.Files) - 1
+		} else if idx < 0 {
+			idx = 0
+		}
+		d.FileIdx = idx
+	} else {
+		// Find the next highlighted (filtered) item in the directory
+		filteredIndices := sortedMapKeys(d.FilteredFiles)
+		nextIdx := d.FileIdx
+		for _, ii := range filteredIndices {
+			if ii > nextIdx {
+				nextIdx = ii
+				break
+			}
+		}
+		if nextIdx == d.FileIdx {
+			nextIdx = filteredIndices[0]
+		}
+		d.FileIdx = nextIdx
+
 	}
-	d.FileIdx = idx
 }
 
 func (d *Directory) SetShowHidden(v bool) {
@@ -129,12 +148,29 @@ func (d *Directory) SetShowHidden(v bool) {
 	d.SetDirectory(d.AbsPath)
 }
 
-func (d *Directory) FilterContents(searchstring string) []os.FileInfo {
-	var filtered  = make([]os.FileInfo, 0, len(d.Files))
-	for _, f := range d.Files {
-		if strings.Contains(f.Name(), searchstring) {
-			filtered = append(filtered, f)
+func (d *Directory) FilterContents(searchstring string) {
+	d.FilteredFiles = make(map[int]os.FileInfo)
+
+	if len(searchstring) > 0 {
+		for ii, f := range d.Files {
+			if strings.Contains(f.Name(), searchstring) {
+				d.FilteredFiles[ii] = f
+			}
 		}
 	}
-	return filtered
+
+	if len(d.FilteredFiles) > 0 {
+		sortedIndices := sortedMapKeys(d.FilteredFiles)
+		d.FileIdx = sortedIndices[0]
+	}
+
+}
+
+func sortedMapKeys(files map[int]os.FileInfo) []int {
+	filteredIndices := make([]int, 0, len(files))
+	for ii := range files {
+		filteredIndices = append(filteredIndices, ii)
+	}
+	sort.Ints(filteredIndices)
+	return filteredIndices
 }
