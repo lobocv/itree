@@ -62,13 +62,12 @@ func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
-func (s *Screen) PrintDirContents(x, y, upperLevels int) error {
+func (s *Screen) PrintDirContents(x, y int, dirlist ctx.DirView) error {
 	var levelOffsetX, levelOffsetY int // Draw position offset
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
 	var scrollOffsety int			   // Offset to scroll the visible directory text by
 
-	dirlist := s.getDirView(upperLevels)
 	screenWidth, screenHeight := termbox.Size()
 
 	levelOffsetX = x
@@ -202,8 +201,8 @@ func (s *Screen) Draw() {
 				s.Print(0, 1, termbox.ColorWhite, termbox.ColorDefault, instruction)
 				s.Print(len(instruction)+2, 1, termbox.ColorWhite, termbox.ColorDefault, string(s.SearchString))
 			}
-
-			err := s.PrintDirContents(0, 2, upperLevels)
+			dirlist := s.getDirView(upperLevels)
+			err := s.PrintDirContents(0, 2, dirlist)
 			if err == nil {
 				break
 			} else {
@@ -255,6 +254,8 @@ func (s *Screen) Ascend() {
 		s.CurrentDir = nextdir
 	}
 }
+
+
 func (s *Screen) Main(dirpath string) string {
 
 
