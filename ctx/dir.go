@@ -51,17 +51,18 @@ func (f OSFiles) Len() int           { return len(f) }
 func (f OSFiles) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 func (f OSFiles) Less(i, j int) bool { return f[i].IsDir() }
 
-func NewDirectory(path string) *Directory {
+func NewDirectory(path string) (*Directory, error) {
 	d := new(Directory)
-	d.SetDirectory(path)
-	return d
-}
-
-func (d *Directory) SetDirectory(path string) error {
 	if _, err := os.Stat(path); err != nil {
-		return err
+		return nil, err
 	}
 	d.AbsPath = path
+	d.updateContents()
+	return d, nil
+}
+
+func (d *Directory) updateContents() error {
+
 	files, err := ioutil.ReadDir(d.AbsPath)
 	if err != nil {
 		return err
@@ -109,7 +110,10 @@ func (d *Directory) Descend() (*Directory, error) {
 	f := d.Files[d.FileIdx]
 	if f.IsDir() {
 		newpath := path.Join(d.AbsPath, f.Name())
-		child := NewDirectory(newpath)
+		child, err := NewDirectory(newpath)
+		if err != nil {
+			return nil, err
+		}
 		child.Parent = d
 		d.Child = child
 		return child, nil
@@ -157,7 +161,7 @@ func (d *Directory) MoveSelector(dy int) {
 
 func (d *Directory) SetShowHidden(v bool) {
 	d.ShowHidden = v
-	d.SetDirectory(d.AbsPath)
+	d.updateContents()
 }
 
 func (d *Directory) FilterContents(searchstring string) {

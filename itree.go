@@ -369,7 +369,11 @@ func main() {
 	var curDir, prevDir, nextDir *ctx.Directory
 	for _, subdir := range pathlist {
 
-		nextDir = ctx.NewDirectory(subdir)
+		nextDir, err = ctx.NewDirectory(subdir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, fmt.Sprintf("%v", err))
+			os.Exit(1)
+		}
 		nextDir.Parent = prevDir
 		if prevDir != nil {
 			prevDir.Child = nextDir
