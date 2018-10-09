@@ -3,15 +3,13 @@ package ctx
 import (
 	"errors"
 	"io/ioutil"
+	"math"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
-	"path/filepath"
-	"math"
 )
-
-
 
 func GetPathComponents(path string) []string {
 	components := make([]string, 0, strings.Count(path, string(os.PathSeparator)))
@@ -29,7 +27,6 @@ func GetPathComponents(path string) []string {
 	components = append([]string{"/"}, components...)
 	return components
 }
-
 
 /*
 Directory methods
@@ -53,6 +50,12 @@ type OSFiles []os.FileInfo
 func (f OSFiles) Len() int           { return len(f) }
 func (f OSFiles) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 func (f OSFiles) Less(i, j int) bool { return f[i].IsDir() }
+
+func NewDirectory(path string) *Directory {
+	d := new(Directory)
+	d.SetDirectory(path)
+	return d
+}
 
 func (d *Directory) SetDirectory(path string) error {
 	if _, err := os.Stat(path); err != nil {
@@ -87,7 +90,7 @@ func (d *Directory) SetDirectory(path string) error {
 	return nil
 }
 
-func (d* Directory) CurrentFile() (os.FileInfo, error) {
+func (d *Directory) CurrentFile() (os.FileInfo, error) {
 	if len(d.Files) == 0 {
 		return nil, errors.New("No item selected.")
 	} else {
@@ -103,11 +106,10 @@ func (d *Directory) Descend() (*Directory, error) {
 	if len(d.Files) == 0 {
 		return nil, nil
 	}
-	child := new(Directory)
 	f := d.Files[d.FileIdx]
 	if f.IsDir() {
 		newpath := path.Join(d.AbsPath, f.Name())
-		child.SetDirectory(newpath)
+		child := NewDirectory(newpath)
 		child.Parent = d
 		d.Child = child
 		return child, nil
@@ -141,7 +143,7 @@ func (d *Directory) MoveSelector(dy int) {
 					d.FileIdx = nextIdx
 					break
 				}
-			} else if ii < nextIdx && dy < 0{
+			} else if ii < nextIdx && dy < 0 {
 				nextIdx = ii
 				count++
 				if count == math.Abs(float64(dy)) {
