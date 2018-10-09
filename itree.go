@@ -67,6 +67,7 @@ func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
 	var scrollOffsety int			   // Offset to scroll the visible directory text by
+	var subDirSpacing = 2			   // Spacing between subdirectories (on top of max item length)
 
 	screenWidth, screenHeight := termbox.Size()
 
@@ -123,16 +124,20 @@ func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 			case 0:
 				if level > 0 {
 					if len(dir.Files) < 2 {
-						line.WriteString("─")
+						line.WriteString(strings.Repeat("─", subDirSpacing))
 					} else {
-						line.WriteString("┬─")
+						line.WriteString(strings.Repeat("─", subDirSpacing))
+						line.WriteString("┬")
 					}
 				} else {
+					line.WriteString(strings.Repeat(" ", subDirSpacing))
 					line.WriteString("├─")
 				}
 			case len(dir.Files) - 1:
+				line.WriteString(strings.Repeat(" ", subDirSpacing))
 				line.WriteString("└─")
 			default:
+				line.WriteString(strings.Repeat(" ", subDirSpacing))
 				line.WriteString("├─")
 			}
 
@@ -166,7 +171,7 @@ func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 
 		// Shift the draw position in preparation for the next directory
 		levelOffsetY += dir.FileIdx
-		levelOffsetX += maxLineWidth + 2
+		levelOffsetX += maxLineWidth + 2 + subDirSpacing
 
 	}
 
