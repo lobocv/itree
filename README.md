@@ -1,6 +1,9 @@
 # itree
 Interactive tree command for file system navigation
 
+![itree Example](https://github.com/lobocv/itree/blob/master/itree.png?raw=true)
+
+
 Requirements
 -------------
 

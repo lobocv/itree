@@ -37,10 +37,6 @@ func (s *Screen) JumpDown() {
 }
 
 
-/*
-Screen drawing methods
-*/
-
 type ScreenState int
 
 const (
