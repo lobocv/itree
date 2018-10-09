@@ -269,6 +269,7 @@ MainLoop:
 				s.captureInput = false
 				s.SearchString = s.SearchString[:0]
 				s.CurrentDir.FilterContents(string(s.SearchString))
+				continue
 			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace {
 				if len(s.SearchString) > 0 {
 					s.SearchString = s.SearchString[:len(s.SearchString)-1]
@@ -277,8 +278,8 @@ MainLoop:
 			} else if ev.Ch != 0 {
 				s.SearchString = append(s.SearchString, ev.Ch)
 				s.CurrentDir.FilterContents(string(s.SearchString))
+				continue MainLoop
 			}
-			//continue MainLoop
 		}
 
 		switch ev.Type {
@@ -301,33 +302,33 @@ MainLoop:
 			case termbox.KeyCtrlH:
 				s.ToggleHelp()
 			}
+			switch ev.Ch {
+			case 'q':
+				break MainLoop
+			case '/':
+				s.captureInput = true
+				s.SearchString = s.SearchString[:0]
+			case 'h':
+				s.CurrentDir.SetShowHidden(!s.CurrentDir.ShowHidden)
+			case 'a':
+				for s.CurrentDir.Parent != nil {
+					s.Ascend()
+				}
+			case 'e':
+				s.JumpUp()
+			case 'd':
+				s.JumpDown()
+			case 'c':
+				// Toggle position between first and last file in the directory
+				if s.CurrentDir.FileIdx == 0 {
+					s.CurrentDir.FileIdx = len(s.CurrentDir.Files) - 1
+				} else {
+					s.CurrentDir.FileIdx = 0
+				}
+			}
 		}
 
-		switch ev.Ch {
-		case 'q':
-			break MainLoop
-		case '/':
-			s.captureInput = true
-			s.SearchString = s.SearchString[:0]
-		case 'h':
-			s.CurrentDir.SetShowHidden(!s.CurrentDir.ShowHidden)
-		case 'a':
-			for s.CurrentDir.Parent != nil {
-				s.Ascend()
-			}
-		case 'e':
-			s.JumpUp()
-		case 'd':
-			s.JumpDown()
-		case 'c':
-			// Toggle position between first and last file in the directory
-			if s.CurrentDir.FileIdx == 0 {
-				s.CurrentDir.FileIdx = len(s.CurrentDir.Files) - 1
-			} else {
-				s.CurrentDir.FileIdx = 0
-			}
 
-		}
 	}
 
 	// Return the directory we end up in

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"path/filepath"
+	"math"
 )
 
 
@@ -127,19 +128,28 @@ func (d *Directory) MoveSelector(dy int) {
 		d.FileIdx = idx
 	} else {
 		// Find the next highlighted (filtered) item in the directory
-		filteredIndices := sortedMapKeys(d.FilteredFiles)
+		// Get an ordered list of the filtered items, reverse it if dy < 0
+		filteredIndices := sortedMapKeys(d.FilteredFiles, dy < 0)
+		// Look for the next item in the list
 		nextIdx := d.FileIdx
+		var count float64
 		for _, ii := range filteredIndices {
-			if ii > nextIdx {
+			if ii > nextIdx && dy > 0 {
 				nextIdx = ii
-				break
+				count++
+				if count == math.Abs(float64(dy)) {
+					d.FileIdx = nextIdx
+					break
+				}
+			} else if ii < nextIdx && dy < 0{
+				nextIdx = ii
+				count++
+				if count == math.Abs(float64(dy)) {
+					d.FileIdx = nextIdx
+					break
+				}
 			}
 		}
-		if nextIdx == d.FileIdx {
-			nextIdx = filteredIndices[0]
-		}
-		d.FileIdx = nextIdx
-
 	}
 }
 
@@ -160,17 +170,21 @@ func (d *Directory) FilterContents(searchstring string) {
 	}
 
 	if len(d.FilteredFiles) > 0 {
-		sortedIndices := sortedMapKeys(d.FilteredFiles)
+		sortedIndices := sortedMapKeys(d.FilteredFiles, false)
 		d.FileIdx = sortedIndices[0]
 	}
 
 }
 
-func sortedMapKeys(files map[int]os.FileInfo) []int {
+func sortedMapKeys(files map[int]os.FileInfo, reverse bool) []int {
 	filteredIndices := make([]int, 0, len(files))
 	for ii := range files {
 		filteredIndices = append(filteredIndices, ii)
 	}
-	sort.Ints(filteredIndices)
+	if reverse {
+		sort.Sort(sort.Reverse(sort.IntSlice(filteredIndices)))
+	} else {
+		sort.Ints(filteredIndices)
+	}
 	return filteredIndices
 }
