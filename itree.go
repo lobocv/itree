@@ -127,7 +127,7 @@ func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 						line.WriteString(strings.Repeat("─", subDirSpacing))
 					} else {
 						line.WriteString(strings.Repeat("─", subDirSpacing))
-						line.WriteString("┬")
+						line.WriteString("┬─")
 					}
 				} else {
 					line.WriteString(strings.Repeat(" ", subDirSpacing))
@@ -192,10 +192,14 @@ func (s *Screen) Draw() {
 	case Help:
 		s.ClearScreen()
 		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "itree - An interactive tree application for file system navigation.")
-		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, "h - Toggle hidden files and folders.")
-		s.Print(0, 3, termbox.ColorWhite, termbox.ColorDefault, "e - Log2 skip up.")
-		s.Print(0, 4, termbox.ColorWhite, termbox.ColorDefault, "d - Log2 skip down.")
-		s.Print(0, 5, termbox.ColorWhite, termbox.ColorDefault, "c - Toggle position between first and last file.")
+		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, "Calvin Lobo, 2018")
+		s.Print(0, 3, termbox.ColorWhite, termbox.ColorDefault, "https://github.com/lobocv/itree")
+		s.Print(0, 5, termbox.ColorWhite, termbox.ColorDefault, "Usage:")
+		s.Print(0, 7, termbox.ColorWhite, termbox.ColorDefault, "h - Toggle hidden files and folders.")
+		s.Print(0, 8, termbox.ColorWhite, termbox.ColorDefault, "e - Log2 skip up.")
+		s.Print(0, 9, termbox.ColorWhite, termbox.ColorDefault, "d - Log2 skip down.")
+		s.Print(0, 10, termbox.ColorWhite, termbox.ColorDefault, "c - Toggle position between first and last file.")
+		s.Print(0, 11, termbox.ColorWhite, termbox.ColorDefault, "/ - Goes into input mode for file searching. Press ESC / CTRL+C to exit input mode.")
 	case Directory:
 		upperLevels, err := strconv.Atoi(os.Getenv("MaxUpperLevels"))
 		if err != nil {
