@@ -17,7 +17,7 @@ Installation
 1. Clone the repository
 
 ```bash
-https://github.com/lobocv/itree
+git clone https://github.com/lobocv/itree
 ```
 
 2. Install itree
@@ -35,8 +35,7 @@ tree navigator will open up in your current terminal.
 itree
 ```
 
-Press
-ESC or CTRL+C to exit. 
+Press `ESC`, `q` or `CTRL+C` to exit. 
 
 Use your arrow keys to easily navigate the directory tree starting from your current directory.
 itree will change to the directory in which you navigate to when you exit itree.
