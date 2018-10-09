@@ -62,7 +62,7 @@ func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
-func (s *Screen) PrintDirContents(x, y int, dirlist ctx.DirView) error {
+func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 	var levelOffsetX, levelOffsetY int // Draw position offset
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
@@ -70,8 +70,8 @@ func (s *Screen) PrintDirContents(x, y int, dirlist ctx.DirView) error {
 
 	screenWidth, screenHeight := termbox.Size()
 
-	levelOffsetX = x
-	levelOffsetY = y
+	levelOffsetX = x0
+	levelOffsetY = y0
 
 	// Determine the scrolling offset
 	scrollOffsety = levelOffsetY
@@ -113,6 +113,7 @@ func (s *Screen) PrintDirContents(x, y int, dirlist ctx.DirView) error {
 
 			}
 
+			// Start creating the line to be printed
 			line := bytes.Buffer{}
 			if ii == 0 {
 				line.WriteString(strings.Repeat("─", stretch))
@@ -142,17 +143,20 @@ func (s *Screen) PrintDirContents(x, y int, dirlist ctx.DirView) error {
 			}
 
 			// Calculate the draw position
-			x := levelOffsetY + ii - scrollOffsety
-			y := levelOffsetX
+			y := levelOffsetY + ii - scrollOffsety
+			x := levelOffsetX
 			if ii == 0 {
 				// The first item is connected to the parent directory with a line
 				// shift the position left to account for this line
-				y -= stretch
+				x -= stretch
 			}
-			if y + len(line.String()) > screenWidth && len(dirlist) > 1 {
+			if x + len(line.String()) > screenWidth && len(dirlist) > 1 {
 				return errors.New("DisplayOverflow")
 			}
-			s.Print(y, x, color, termbox.ColorDefault, line.String())
+			if y < y0  {
+				y = y0
+			}
+			s.Print(x, y, color, termbox.ColorDefault, line.String())
 		}
 
 		// Determine the length of line we need to draw to connect to the next directory
