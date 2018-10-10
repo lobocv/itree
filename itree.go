@@ -365,9 +365,8 @@ func (s *Screen) Main(dirpath string) string {
 			case 'h':
 				s.CurrentDir.SetShowHidden(!s.CurrentDir.ShowHidden)
 			case 'a':
-				for s.CurrentDir.Parent != nil {
-					s.exitCurrentDirectory()
-				}
+				s.exitCurrentDirectory()
+				s.exitCurrentDirectory()
 			case 'e':
 				s.jumpUp()
 			case 'd':
