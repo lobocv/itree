@@ -281,6 +281,41 @@ func (s *Screen) exitCurrentDirectory() {
 	}
 }
 
+// Sets the application in the mode to capture input for the search string
+func (s *Screen) startCapturingInput() {
+	s.captureInput = true
+	s.SearchString = s.SearchString[:0]
+}
+
+// Exits the mode to capture input for the search string
+func (s *Screen) stopCapturingInput() {
+	s.captureInput = false
+	s.SearchString = s.SearchString[:0]
+	s.CurrentDir.FilterContents(string(s.SearchString))
+}
+
+// Add a character to the search string
+func (s *Screen) appendToSearchString(ch rune) {
+	s.SearchString = append(s.SearchString, ch)
+	s.CurrentDir.FilterContents(string(s.SearchString))
+}
+
+// Remove a character from the search string
+func (s *Screen) popFromSearchString() {
+	if len(s.SearchString) > 0 {
+		s.SearchString = s.SearchString[:len(s.SearchString)-1]
+		s.CurrentDir.FilterContents(string(s.SearchString))
+	}
+}
+
+// Toggle position between first and last file in the directory
+func (s *Screen) toggleIndexToExtremities() {
+	if s.CurrentDir.FileIdx == 0 {
+		s.CurrentDir.FileIdx = len(s.CurrentDir.Files) - 1
+	} else {
+		s.CurrentDir.FileIdx = 0
+	}
+}
 
 // Main loop of the application
 func (s *Screen) Main(dirpath string) string {
@@ -292,18 +327,12 @@ func (s *Screen) Main(dirpath string) string {
 		ev := termbox.PollEvent()
 		if s.captureInput {
 			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
-				s.captureInput = false
-				s.SearchString = s.SearchString[:0]
-				s.CurrentDir.FilterContents(string(s.SearchString))
+				s.stopCapturingInput()
 				continue
 			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace {
-				if len(s.SearchString) > 0 {
-					s.SearchString = s.SearchString[:len(s.SearchString)-1]
-					s.CurrentDir.FilterContents(string(s.SearchString))
-				}
+				s.popFromSearchString()
 			} else if ev.Ch != 0 {
-				s.SearchString = append(s.SearchString, ev.Ch)
-				s.CurrentDir.FilterContents(string(s.SearchString))
+				s.appendToSearchString(ev.Ch)
 				continue MainLoop
 			}
 		}
@@ -332,8 +361,7 @@ func (s *Screen) Main(dirpath string) string {
 			case 'q':
 				break MainLoop
 			case '/':
-				s.captureInput = true
-				s.SearchString = s.SearchString[:0]
+				s.startCapturingInput()
 			case 'h':
 				s.CurrentDir.SetShowHidden(!s.CurrentDir.ShowHidden)
 			case 'a':
@@ -345,12 +373,7 @@ func (s *Screen) Main(dirpath string) string {
 			case 'd':
 				s.jumpDown()
 			case 'c':
-				// Toggle position between first and last file in the directory
-				if s.CurrentDir.FileIdx == 0 {
-					s.CurrentDir.FileIdx = len(s.CurrentDir.Files) - 1
-				} else {
-					s.CurrentDir.FileIdx = 0
-				}
+				s.toggleIndexToExtremities()
 			}
 		}
 
