@@ -22,6 +22,27 @@ func max(i, j int) int {
 	}
 }
 
+// Create an enumeration for tracking what the screen's "state" is
+// This governs what the screen should draw when .Draw() is called.
+type ScreenState int
+const (
+	Directory ScreenState = iota
+	Help
+)
+
+// Screen represents the application
+type Screen struct {
+	SearchString  []rune
+	CurrentDir	  *ctx.Directory
+	state         ScreenState
+	captureInput  bool
+
+	highlightedColor termbox.Attribute
+	filteredColor	 termbox.Attribute
+	directoryColor	 termbox.Attribute
+	fileColor	 	 termbox.Attribute
+}
+
 // Move up by half the distance between the selected file
 // Always move at least 2 steps
 func (s *Screen) JumpUp() {
@@ -36,21 +57,7 @@ func (s *Screen) JumpDown() {
 	s.CurrentDir.MoveSelector(by)
 }
 
-
-type ScreenState int
-
-const (
-	Directory ScreenState = iota
-	Help
-)
-
-type Screen struct {
-	SearchString  []rune
-	CurrentDir	  *ctx.Directory
-	state         ScreenState
-	captureInput  bool
-}
-
+// Prints text to the terminal at the provided position and color
 func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	for _, c := range msg {
 		termbox.SetCell(x, y, c, fg, bg)
@@ -58,6 +65,7 @@ func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
+// Prints the structure of the directory path provided
 func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 	var levelOffsetX, levelOffsetY int // Draw position offset
 	var stretch int                    // Length of line connecting subdirectories
@@ -75,6 +83,8 @@ func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 	for _, dir := range dirlist {
 		scrollOffsety += dir.FileIdx
 	}
+	// If the selected item is off the screen then shift the entire view up in order
+	// to make it visible.
 	scrollOffsety -= screenHeight - levelOffsetY
 	if scrollOffsety < 0 {
 		scrollOffsety = 0
@@ -83,29 +93,29 @@ func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 		scrollOffsety = int(math.Ceil(float64(scrollOffsety) / pagejump) * pagejump)
 	}
 
-	// Recurse through the directory list, drawing a tree structure
+	// Iterate through the directory list, drawing a tree structure
 	for level, dir := range dirlist {
 		maxLineWidth = 0
 
 		for ii, f := range dir.Files {
 
 			// Keep track of the longest length item in the directory
-			filename_len := len(f.Name())
-			if filename_len > maxLineWidth {
-				maxLineWidth = filename_len
+			filenameLen := len(f.Name())
+			if filenameLen > maxLineWidth {
+				maxLineWidth = filenameLen
 			}
 
 			// Determine the color of the currently printing directory item
 			var color termbox.Attribute
 			if dir.FileIdx == ii && level == len(dirlist)-1 {
-				color = termbox.ColorCyan
+				color = s.highlightedColor
 			} else {
 				if _, ok := dir.FilteredFiles[ii]; ok {
-					color = termbox.ColorGreen
+					color = s.highlightedColor
 				} else if f.IsDir() {
-					color = termbox.ColorYellow
+					color = s.directoryColor
 				} else {
-					color = termbox.ColorWhite
+					color = s.fileColor
 				}
 
 			}
@@ -392,11 +402,19 @@ func main() {
 	// Set the current directory context
 	curDir = nextDir
 
-	s := Screen{make([]rune, 0, 100), curDir, Directory, false}
+	s := Screen{make([]rune, 0, 100),
+				curDir,
+				Directory,
+				false,
+				termbox.ColorCyan,
+				termbox.ColorGreen,
+				termbox.ColorYellow,
+				termbox.ColorWhite,
+
+				}
 	finalPath := s.Main(cwd)
 	// We must print the directory we end up in so that we can change to it
 	// If we end up selecting a directory item, then change into that directory,
 	// If we end up on a file item, change into that files directory
-
 	fmt.Print(finalPath)
 }
