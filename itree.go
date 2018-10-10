@@ -111,7 +111,7 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 				color = s.highlightedColor
 			} else {
 				if _, ok := dir.FilteredFiles[ii]; ok {
-					color = s.highlightedColor
+					color = s.filteredColor
 				} else if f.IsDir() {
 					color = s.directoryColor
 				} else {
