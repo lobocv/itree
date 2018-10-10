@@ -1,17 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"github.com/lobocv/itree/ctx"
 	"github.com/nsf/termbox-go"
-	"os"
-	"path/filepath"
-	"path"
 	"math"
-	"bytes"
-	"strings"
-	"errors"
+	"os"
+	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func max(i, j int) int {
@@ -70,8 +70,8 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 	var levelOffsetX, levelOffsetY int // draw position offset
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
-	var scrollOffsety int			   // Offset to scroll the visible directory text by
-	var subDirSpacing = 2			   // Spacing between subdirectories (on top of max item length)
+	var scrollOffsety int              // Offset to scroll the visible directory text by
+	var subDirSpacing = 2              // Spacing between subdirectories (on top of max item length)
 
 	screenWidth, screenHeight := termbox.Size()
 
@@ -90,7 +90,7 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 		scrollOffsety = 0
 	} else {
 		pagejump := float64(screenHeight) / 5
-		scrollOffsety = int(math.Ceil(float64(scrollOffsety) / pagejump) * pagejump)
+		scrollOffsety = int(math.Ceil(float64(scrollOffsety)/pagejump) * pagejump)
 	}
 
 	// Iterate through the directory list, drawing a tree structure
@@ -161,10 +161,10 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 				// shift the position left to account for this line
 				x -= stretch
 			}
-			if x + len(line.String()) > screenWidth && len(dirlist) > 1 {
+			if x+len(line.String()) > screenWidth && len(dirlist) > 1 {
 				return errors.New("DisplayOverflow")
 			}
-			if y < y0  {
+			if y < y0 {
 				y = y0
 			}
 			s.Print(x, y, color, termbox.ColorDefault, line.String())
@@ -242,7 +242,7 @@ func (s *Screen) clearScreen() {
 
 // Get a subset of the directory chain as a slice where the last element is the current directory
 // upperLevels is the number of directory levels above the current directory to include in the slice.
-func (s *Screen) getDirView(upperLevels int ) ctx.DirView {
+func (s *Screen) getDirView(upperLevels int) ctx.DirView {
 	// Create a slice of the directory chain containing upperLevels number of parents
 	dir := s.CurrentDir
 	dirlist := make([]*ctx.Directory, 0, 1+upperLevels)
@@ -376,13 +376,12 @@ func (s *Screen) Main(dirpath string) string {
 			}
 		}
 
-
 	}
 
 	// Return the directory we end up in
 	currentItem, err := s.CurrentDir.CurrentFile()
 	if err == nil && currentItem.IsDir() && os.Getenv("EnterLastSelected") == "1" {
-		return  path.Join(s.CurrentDir.AbsPath, currentItem.Name())
+		return path.Join(s.CurrentDir.AbsPath, currentItem.Name())
 	} else {
 		return s.CurrentDir.AbsPath
 	}
@@ -412,8 +411,11 @@ func main() {
 	var curDir, prevDir, nextDir *ctx.Directory
 	for _, subdir := range pathlist {
 
-		nextDir = new(ctx.Directory)
-		nextDir.SetDirectory(subdir)
+		nextDir, err = ctx.NewDirectory(subdir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, fmt.Sprintf("%v", err))
+			os.Exit(1)
+		}
 		nextDir.Parent = prevDir
 		if prevDir != nil {
 			prevDir.Child = nextDir
