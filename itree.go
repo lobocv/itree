@@ -263,6 +263,29 @@ func (s *Screen) Ascend() {
 	}
 }
 
+func (s *Screen) startCapturingInput() {
+	s.captureInput = true
+	s.SearchString = s.SearchString[:0]
+}
+
+func (s *Screen) stopCapturingInput() {
+	s.captureInput = false
+	s.SearchString = s.SearchString[:0]
+	s.CurrentDir.FilterContents(string(s.SearchString))
+}
+
+func (s *Screen) popFromSearchString() {
+	if len(s.SearchString) > 0 {
+		s.SearchString = s.SearchString[:len(s.SearchString)-1]
+		s.CurrentDir.FilterContents(string(s.SearchString))
+	}
+}
+
+func (s *Screen) appendToSearchString(char rune) {
+	s.SearchString = append(s.SearchString, char)
+	s.CurrentDir.FilterContents(string(s.SearchString))
+}
+
 func (s *Screen) Main(dirpath string) string {
 
 MainLoop:
@@ -272,18 +295,12 @@ MainLoop:
 		ev := termbox.PollEvent()
 		if s.captureInput {
 			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
-				s.captureInput = false
-				s.SearchString = s.SearchString[:0]
-				s.CurrentDir.FilterContents(string(s.SearchString))
+				s.stopCapturingInput()
 				continue
 			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace {
-				if len(s.SearchString) > 0 {
-					s.SearchString = s.SearchString[:len(s.SearchString)-1]
-					s.CurrentDir.FilterContents(string(s.SearchString))
-				}
+				s.popFromSearchString()
 			} else if ev.Ch != 0 {
-				s.SearchString = append(s.SearchString, ev.Ch)
-				s.CurrentDir.FilterContents(string(s.SearchString))
+				s.appendToSearchString(ev.Ch)
 				continue MainLoop
 			}
 		}
@@ -312,8 +329,7 @@ MainLoop:
 			case 'q':
 				break MainLoop
 			case '/':
-				s.captureInput = true
-				s.SearchString = s.SearchString[:0]
+				s.startCapturingInput()
 			case 'h':
 				s.CurrentDir.SetShowHidden(!s.CurrentDir.ShowHidden)
 			case 'a':
