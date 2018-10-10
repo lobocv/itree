@@ -398,6 +398,15 @@ func fatal(err error) {
 func main() {
 	var err error
 
+	for _, arg := range os.Args {
+		switch arg {
+		case "-h", "--help":
+			fmt.Fprintln(os.Stderr,"itree - A visual file system navigation tool.\n" +
+						  "Press h for information on hotkeys.")
+			os.Exit(0)
+		}
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic("Cannot get current working directory")
