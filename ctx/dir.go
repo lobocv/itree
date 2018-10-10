@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func GetPathComponents(path string) []string {
+func getPathComponents(path string) []string {
 	components := make([]string, 0, strings.Count(path, string(os.PathSeparator)))
 	dir := path
 	ok := true
@@ -27,6 +27,33 @@ func GetPathComponents(path string) []string {
 	components = append([]string{"/"}, components...)
 	return components
 }
+
+func CreateDirectoryChain(path string) (*Directory, error) {
+
+	var prevDir, nextDir *Directory
+	var err error
+	for _, subdir := range getPathComponents(path){
+		nextDir, err = NewDirectory(subdir)
+
+		if err != nil {
+			return nil, err
+		}
+		nextDir.Parent = prevDir
+		if prevDir != nil {
+			prevDir.Child = nextDir
+			for ii, f := range prevDir.Files {
+				if strings.HasSuffix(subdir, f.Name()) {
+					prevDir.FileIdx = ii
+					break
+				}
+			}
+		}
+		prevDir = nextDir
+	}
+
+	return nextDir, nil
+}
+
 
 /*
 Directory methods

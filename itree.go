@@ -318,7 +318,7 @@ func (s *Screen) toggleIndexToExtremities() {
 }
 
 // Main loop of the application
-func (s *Screen) Main(dirpath string) string {
+func (s *Screen) Main() string {
 
 	MainLoop:
 	for {
@@ -388,6 +388,13 @@ func (s *Screen) Main(dirpath string) string {
 
 }
 
+// Print error message to stderr and exit with error code 1
+func fatal(err error) {
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("%v", err))
+	os.Exit(1)
+}
+
+
 func main() {
 	var err error
 
@@ -407,29 +414,15 @@ func main() {
 	}
 	defer termbox.Close()
 
-	pathlist := ctx.GetPathComponents(cwd)
-	var curDir, prevDir, nextDir *ctx.Directory
-	for _, subdir := range pathlist {
-
-		nextDir, err = ctx.NewDirectory(subdir)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, fmt.Sprintf("%v", err))
-			os.Exit(1)
-		}
-		nextDir.Parent = prevDir
-		if prevDir != nil {
-			prevDir.Child = nextDir
-			for ii, f := range prevDir.Files {
-				if strings.HasSuffix(subdir, f.Name()) {
-					prevDir.FileIdx = ii
-					break
-				}
-			}
-		}
-		prevDir = nextDir
-	}
 	// Set the current directory context
-	curDir = nextDir
+	var curDir *ctx.Directory
+	curDir, err = ctx.CreateDirectoryChain(cwd)
+	if curDir == nil {
+		fatal(err)
+	}
+	if err != nil {
+		fatal(err)
+	}
 
 	s := Screen{make([]rune, 0, 100),
 				curDir,
@@ -441,7 +434,7 @@ func main() {
 				termbox.ColorWhite,
 
 				}
-	finalPath := s.Main(cwd)
+	finalPath := s.Main()
 	// We must print the directory we end up in so that we can change to it
 	// If we end up selecting a directory item, then change into that directory,
 	// If we end up on a file item, change into that files directory
