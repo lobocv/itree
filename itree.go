@@ -23,7 +23,7 @@ func max(i, j int) int {
 }
 
 // Create an enumeration for tracking what the screen's "state" is
-// This governs what the screen should draw when .Draw() is called.
+// This governs what the screen should draw when .draw() is called.
 type ScreenState int
 const (
 	Directory ScreenState = iota
@@ -45,14 +45,14 @@ type Screen struct {
 
 // Move up by half the distance between the selected file
 // Always move at least 2 steps
-func (s *Screen) JumpUp() {
+func (s *Screen) jumpUp() {
 	by := -max(2, s.CurrentDir.FileIdx/2)
 	s.CurrentDir.MoveSelector(by)
 }
 
 // Move down by half the distance between the selected file
 // Always move at least 2 steps
-func (s *Screen) JumpDown() {
+func (s *Screen) jumpDown() {
 	by := max(2, (len(s.CurrentDir.Files)-s.CurrentDir.FileIdx)/2)
 	s.CurrentDir.MoveSelector(by)
 }
@@ -66,8 +66,8 @@ func (s *Screen) Print(x, y int, fg, bg termbox.Attribute, msg string) {
 }
 
 // Prints the structure of the directory path provided
-func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
-	var levelOffsetX, levelOffsetY int // Draw position offset
+func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
+	var levelOffsetX, levelOffsetY int // draw position offset
 	var stretch int                    // Length of line connecting subdirectories
 	var maxLineWidth int               // Length of longest item in the directory
 	var scrollOffsety int			   // Offset to scroll the visible directory text by
@@ -184,7 +184,8 @@ func (s *Screen) PrintDirContents(x0, y0 int, dirlist ctx.DirView) error {
 	return nil
 }
 
-func (s *Screen) ToggleHelp() ScreenState {
+// Toggles the state of the screen between regular view and the help screen
+func (s *Screen) toggleHelp() ScreenState {
 	if s.state != Help {
 		s.state = Help
 	} else {
@@ -193,10 +194,11 @@ func (s *Screen) ToggleHelp() ScreenState {
 	return s.state
 }
 
-func (s *Screen) Draw() {
+// Draw the current representation of the screen
+func (s *Screen) draw() {
 	switch s.state {
 	case Help:
-		s.ClearScreen()
+		s.clearScreen()
 		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "itree - An interactive tree application for file system navigation.")
 		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, "Calvin Lobo, 2018")
 		s.Print(0, 3, termbox.ColorWhite, termbox.ColorDefault, "https://github.com/lobocv/itree")
@@ -212,7 +214,7 @@ func (s *Screen) Draw() {
 			upperLevels = 3
 		}
 		for {
-			s.ClearScreen()
+			s.clearScreen()
 			// Print the current path
 			s.Print(0, 0, termbox.ColorRed, termbox.ColorDefault, s.CurrentDir.AbsPath)
 			if s.captureInput {
@@ -221,7 +223,7 @@ func (s *Screen) Draw() {
 				s.Print(len(instruction)+2, 1, termbox.ColorWhite, termbox.ColorDefault, string(s.SearchString))
 			}
 			dirlist := s.getDirView(upperLevels)
-			err := s.PrintDirContents(0, 2, dirlist)
+			err := s.drawDirContents(0, 2, dirlist)
 			if err == nil {
 				break
 			} else {
@@ -233,10 +235,13 @@ func (s *Screen) Draw() {
 	termbox.Flush()
 }
 
-func (s *Screen) ClearScreen() {
+// Clear the contents of the screen
+func (s *Screen) clearScreen() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 }
 
+// Get a subset of the directory chain as a slice where the last element is the current directory
+// upperLevels is the number of directory levels above the current directory to include in the slice.
 func (s *Screen) getDirView(upperLevels int ) ctx.DirView {
 	// Create a slice of the directory chain containing upperLevels number of parents
 	dir := s.CurrentDir
@@ -253,7 +258,8 @@ func (s *Screen) getDirView(upperLevels int ) ctx.DirView {
 	return dirlist
 }
 
-func (s *Screen) Descend()  {
+// Enters the currently selected directory
+func (s *Screen) enterCurrentDirectory()  {
 	dir := s.CurrentDir
 	dir.Descend()
 	s.SearchString = s.SearchString[:0]
@@ -264,7 +270,8 @@ func (s *Screen) Descend()  {
 	}
 }
 
-func (s *Screen) Ascend() {
+// Exits the current directory.
+func (s *Screen) exitCurrentDirectory() {
 	s.captureInput = false
 	s.SearchString = s.SearchString[:0]
 	s.CurrentDir.FilterContents(string(s.SearchString))
@@ -275,12 +282,12 @@ func (s *Screen) Ascend() {
 }
 
 
+// Main loop of the application
 func (s *Screen) Main(dirpath string) string {
 
-
-MainLoop:
+	MainLoop:
 	for {
-		s.Draw()
+		s.draw()
 
 		ev := termbox.PollEvent()
 		if s.captureInput {
@@ -311,15 +318,15 @@ MainLoop:
 			case termbox.KeyArrowDown:
 				s.CurrentDir.MoveSelector(1)
 			case termbox.KeyArrowLeft:
-				s.Ascend()
+				s.exitCurrentDirectory()
 			case termbox.KeyArrowRight:
-				s.Descend()
+				s.enterCurrentDirectory()
 			case termbox.KeyPgup:
-				s.JumpUp()
+				s.jumpUp()
 			case termbox.KeyPgdn:
-				s.JumpDown()
+				s.jumpDown()
 			case termbox.KeyCtrlH:
-				s.ToggleHelp()
+				s.toggleHelp()
 			}
 			switch ev.Ch {
 			case 'q':
@@ -331,12 +338,12 @@ MainLoop:
 				s.CurrentDir.SetShowHidden(!s.CurrentDir.ShowHidden)
 			case 'a':
 				for s.CurrentDir.Parent != nil {
-					s.Ascend()
+					s.exitCurrentDirectory()
 				}
 			case 'e':
-				s.JumpUp()
+				s.jumpUp()
 			case 'd':
-				s.JumpDown()
+				s.jumpDown()
 			case 'c':
 				// Toggle position between first and last file in the directory
 				if s.CurrentDir.FileIdx == 0 {
@@ -372,14 +379,12 @@ func main() {
 		panic("Cannot get absolute directory.")
 	}
 
-
 	// Initialize the library that draws to the terminal
 	err = termbox.Init()
 	if err != nil {
 		panic(err)
 	}
 	defer termbox.Close()
-
 
 	pathlist := ctx.GetPathComponents(cwd)
 	var curDir, prevDir, nextDir *ctx.Directory
