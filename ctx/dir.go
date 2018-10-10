@@ -109,10 +109,13 @@ func (d *Directory) Descend() (*Directory, error) {
 		newpath := path.Join(d.AbsPath, f.Name())
 		child.SetDirectory(newpath)
 		child.Parent = d
+		if d.Child != nil {
+			d.Child.Parent = nil // Orphan the old child (...brutal)
+		}
 		d.Child = child
 		return child, nil
 	} else {
-		return nil, errors.New("Cannot enter non-directory.")
+		return nil, errors.New("cannot enter non-directory")
 	}
 }
 
@@ -176,6 +179,7 @@ func (d *Directory) FilterContents(searchstring string) {
 
 }
 
+// Return a slice of the map keys sorted in ascending order
 func sortedMapKeys(files map[int]os.FileInfo, reverse bool) []int {
 	filteredIndices := make([]int, 0, len(files))
 	for ii := range files {
