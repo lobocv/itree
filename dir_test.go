@@ -38,7 +38,7 @@ func setUp() error {
 }
 
 func tearDown() {
-	//os.RemoveAll(testDirRoot)
+	os.RemoveAll(testDirRoot)
 }
 func TestHiddenFiles(t *testing.T) {
 	err := setUp()
@@ -47,6 +47,21 @@ func TestHiddenFiles(t *testing.T) {
 	}
 	defer tearDown()
 
+	curDir, err := getDirChain()
+	if err != nil {
+		t.Error(err)
+	}
+	a := curDir.Parent
+	a.SetShowHidden(false)
+	expected := 2
+	if len(a.Files) != expected {
+		t.Error(fmt.Sprintf("Expected %d files, found %d", expected, len(a.Files)))
+	}
+	a.SetShowHidden(true)
+	expected = 3
+	if len(a.Files) != expected {
+		t.Error(fmt.Sprintf("Expected %d files, found %d", expected, len(a.Files)))
+	}
 
 }
 func TestFilterContents(t *testing.T) {
