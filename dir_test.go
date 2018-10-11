@@ -2,18 +2,20 @@ package main
 
 import (
 	"fmt"
+	"github.com/lobocv/itree/ctx"
 	"io/ioutil"
 	"os"
 	"testing"
-	"github.com/lobocv/itree/ctx"
 )
 
 var testDirRoot = "/tmp/itree"
 
 var dirpaths = []string {testDirRoot + "/a/a1/a2",
-					  	 testDirRoot + "/b/b1/b2"}
+					  	 testDirRoot + "/a/A1",
+					  	 testDirRoot + "/b/b1/b2",
+						 }
 
-var filepaths = []string {"/a/f1", "/a/f2", "/a/f3", "/a/a1/f1", "/a/a1/a2/f2", "/a/a1/a2/f3"}
+var filepaths = []string {"/a/f1", "/a/f2", "/a/f3", "/a/a1/f1", "/a/a1/.hidden", "/a/a1/a2/f2", "/a/a1/a2/f3"}
 
 
 func setUp() error {
@@ -36,12 +38,16 @@ func setUp() error {
 }
 
 func tearDown() {
-	for _, fp := range filepaths {
-		err:= os.Remove(testDirRoot + fp)
-		if err != nil {
-			panic(fmt.Sprintf("Cannot remove file %v", testDirRoot + fp))
-		}
+	//os.RemoveAll(testDirRoot)
+}
+func TestHiddenFiles(t *testing.T) {
+	err := setUp()
+	if err != nil {
+		t.Error(err)
 	}
+	defer tearDown()
+
+
 }
 func TestFilterContents(t *testing.T) {
 	err := setUp()
@@ -55,9 +61,46 @@ func TestFilterContents(t *testing.T) {
 		t.Error(err)
 	}
 	a := curDir.Parent.Parent
+
+	// Check filtering is working
 	a.FilterContents("f")
-	if len(a.FilteredFiles) != 3 {
-		t.Error("Expected 3 files")
+	expected := 3
+	if len(a.FilteredFiles) != expected {
+		t.Error(fmt.Sprintf("Expected %d files, found %d", expected, len(a.FilteredFiles)))
+	}
+	// Check that filtering automatically moves index
+	expected =2
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected file index %d, found %d", expected, a.FileIdx))
+	}
+	// Check we cannot move selector down since all files before the current are not in filter
+	expected = a.FileIdx
+	a.MoveSelector(-1)
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected file index %d, found %d", expected, a.FileIdx))
+	}
+	a.MoveSelector(2)
+	expected += 2
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected file index %d, found %d", expected, a.FileIdx))
+	}
+	a.MoveSelector(-2) // Undo
+	expected -= 2
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected file index %d, found %d", expected, a.FileIdx))
+	}
+
+	a.MoveSelector(100)
+	expected = len(a.Files) -1
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected file index %d, found %d", expected, a.FileIdx))
+	}
+
+	// Check clearing the filter works
+	a.FilterContents("")
+	expected = 0
+	if len(a.FilteredFiles) != expected {
+		t.Error(fmt.Sprintf("Expected %d files, found %d", expected, len(a.FilteredFiles)))
 	}
 
 }

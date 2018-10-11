@@ -168,24 +168,26 @@ func (d *Directory) MoveSelector(dy int) {
 		filteredIndices := sortedMapKeys(d.FilteredFiles, dy < 0)
 		// Look for the next item in the list
 		nextIdx := d.FileIdx
-		var count float64
+		var count int
+		var dyAbs = int(math.Abs(float64(dy)))
+
 		for _, ii := range filteredIndices {
 			if ii > nextIdx && dy > 0 {
 				nextIdx = ii
 				count++
-				if count == math.Abs(float64(dy)) {
-					d.FileIdx = nextIdx
+				if count == dyAbs {
 					break
 				}
 			} else if ii < nextIdx && dy < 0 {
 				nextIdx = ii
 				count++
-				if count == math.Abs(float64(dy)) {
-					d.FileIdx = nextIdx
+				if count == dyAbs {
 					break
 				}
 			}
 		}
+		d.FileIdx = nextIdx
+
 	}
 }
 
