@@ -15,7 +15,9 @@ var dirpaths = []string {testDirRoot + "/a/a1/a2",
 					  	 testDirRoot + "/b/b1/b2",
 						 }
 
-var filepaths = []string {"/a/f1", "/a/f2", "/a/f3", "/a/a1/f1", "/a/a1/.hidden", "/a/a1/a2/f2", "/a/a1/a2/f3"}
+var filepaths = []string {"/a/f1", "/a/f2", "/a/f3",
+						  "/a/a1/f1", "/a/a1/.hidden",
+						  "/a/a1/a2/f2", "/a/a1/a2/f3"}
 
 
 func setUp() error {
@@ -39,7 +41,46 @@ func setUp() error {
 
 func tearDown() {
 	os.RemoveAll(testDirRoot)
+
 }
+func TestFileIdxNavigation(t *testing.T) {
+	err := setUp()
+	if err != nil {
+		t.Error(err)
+	}
+	defer tearDown()
+
+	curDir, err := getDirChain()
+	if err != nil {
+		t.Error(err)
+	}
+	a := curDir.Parent.Parent
+	expected := 0
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected FileIdx =%d, found %d", expected, a.FileIdx))
+	}
+	a.MoveSelector(100)
+	expected = len(a.Files)-1
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected FileIdx =%d, found %d", expected, a.FileIdx))
+	}
+	a.MoveSelector(-100)
+	expected = 0
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected FileIdx =%d, found %d", expected, a.FileIdx))
+	}
+	a.MoveSelector(1)
+	expected = 1
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected FileIdx =%d, found %d", expected, a.FileIdx))
+	}
+	a.MoveSelector(2)
+	expected = 3
+	if a.FileIdx != expected {
+		t.Error(fmt.Sprintf("Expected FileIdx =%d, found %d", expected, a.FileIdx))
+	}
+}
+
 func TestHiddenFiles(t *testing.T) {
 	err := setUp()
 	if err != nil {
