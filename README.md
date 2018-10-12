@@ -29,7 +29,7 @@ sudo ./install.sh
 Usage
 -----
 
-Usaging itree is simple, just type itree and an interactive 
+Once installed, usaging itree is simple, just type itree and an interactive 
 tree navigator will open up in your current terminal. 
 ```
 itree
@@ -43,3 +43,13 @@ itree will change to the directory in which you navigate to when you exit itree.
 itree also provides some other convenient hotkeys for easier navigation.
 Press CTRL+h to show a help screen of all available hotkeys.
 
+
+Without installation you must compile the go binary and call itree as following:
+
+```bash
+
+go build itree.go
+
+cd $(./itree)
+
+```
