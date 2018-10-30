@@ -25,22 +25,41 @@ func max(i, j int) int {
 // Create an enumeration for tracking what the screen's "state" is
 // This governs what the screen should draw when .draw() is called.
 type ScreenState int
+
 const (
 	Directory ScreenState = iota
 	Help
 )
 
+type CaptureMode int
+
+const (
+	Search CaptureMode = iota
+	Command
+)
+
+type ExitCommand struct {
+	command string
+	args    []string
+}
+
+func (cmd *ExitCommand) FullCommand() string {
+	return cmd.command + " " + strings.Join(cmd.args, " ")
+}
+
 // Screen represents the application
 type Screen struct {
-	SearchString  []rune
-	CurrentDir	  *ctx.Directory
+	CurrentDir    *ctx.Directory
 	state         ScreenState
+	searchString  []rune
+	commandString []rune
 	captureInput  bool
+	captureMode   CaptureMode
 
 	highlightedColor termbox.Attribute
-	filteredColor	 termbox.Attribute
-	directoryColor	 termbox.Attribute
-	fileColor	 	 termbox.Attribute
+	filteredColor    termbox.Attribute
+	directoryColor   termbox.Attribute
+	fileColor        termbox.Attribute
 }
 
 // Move up by half the distance between the selected file
@@ -198,16 +217,25 @@ func (s *Screen) toggleHelp() ScreenState {
 func (s *Screen) draw() {
 	switch s.state {
 	case Help:
+		var help = []string{
+			"itree - An interactive tree application for file system navigation.",
+			"Calvin Lobo, 2018",
+			"https://github.com/lobocv/itree",
+			"",
+			"CTRL+h 	- Opens help menu to show the list of hotkey mappings.",
+			"h 			- Toggle on / off visibility of hidden files.",
+			"e 			- Move selector half the distance between the current position and the top of the directory.",
+			"d 			- Move selector half the distance between the current position and the bottom of the directory.",
+			"c 			- Toggle position",
+			"a 			- Jump up two directories.",
+			"/ 			- Enters input capture mode for directory filtering.",
+			": 			- Enters input capture mode for exit command.",
+		}
 		s.clearScreen()
-		s.Print(0, 0, termbox.ColorWhite, termbox.ColorDefault, "itree - An interactive tree application for file system navigation.")
-		s.Print(0, 2, termbox.ColorWhite, termbox.ColorDefault, "Calvin Lobo, 2018")
-		s.Print(0, 3, termbox.ColorWhite, termbox.ColorDefault, "https://github.com/lobocv/itree")
-		s.Print(0, 5, termbox.ColorWhite, termbox.ColorDefault, "Usage:")
-		s.Print(0, 7, termbox.ColorWhite, termbox.ColorDefault, "h - Toggle hidden files and folders.")
-		s.Print(0, 8, termbox.ColorWhite, termbox.ColorDefault, "e - Log2 skip up.")
-		s.Print(0, 9, termbox.ColorWhite, termbox.ColorDefault, "d - Log2 skip down.")
-		s.Print(0, 10, termbox.ColorWhite, termbox.ColorDefault, "c - Toggle position between first and last file.")
-		s.Print(0, 11, termbox.ColorWhite, termbox.ColorDefault, "/ - Goes into input mode for file searching. Press ESC / CTRL+C to exit input mode.")
+		for ln, line := range help {
+			s.Print(0, ln, termbox.ColorWhite, termbox.ColorDefault, line)
+		}
+
 	case Directory:
 		upperLevels, err := strconv.Atoi(os.Getenv("MaxUpperLevels"))
 		if err != nil {
@@ -215,12 +243,17 @@ func (s *Screen) draw() {
 		}
 		for {
 			s.clearScreen()
+			var instruction string
 			// Print the current path
 			s.Print(0, 0, termbox.ColorRed, termbox.ColorDefault, s.CurrentDir.AbsPath)
 			if s.captureInput {
-				instruction := "Enter a search string:"
+				switch s.captureMode {
+				case Search:
+					instruction = "Enter a search string:  " + string(s.searchString)
+				case Command:
+					instruction = "Enter a terminal command:  " + string(s.commandString)
+				}
 				s.Print(0, 1, termbox.ColorWhite, termbox.ColorDefault, instruction)
-				s.Print(len(instruction)+2, 1, termbox.ColorWhite, termbox.ColorDefault, string(s.SearchString))
 			}
 			dirlist := s.getDirView(upperLevels)
 			err := s.drawDirContents(0, 2, dirlist)
@@ -259,11 +292,11 @@ func (s *Screen) getDirView(upperLevels int) ctx.DirView {
 }
 
 // Enters the currently selected directory
-func (s *Screen) enterCurrentDirectory()  {
+func (s *Screen) enterCurrentDirectory() {
 	dir := s.CurrentDir
 	dir.Descend()
-	s.SearchString = s.SearchString[:0]
-	dir.FilterContents(string(s.SearchString))
+	s.searchString = s.searchString[:0]
+	dir.FilterContents(string(s.searchString))
 	nextdir, err := dir.Descend()
 	if nextdir != nil && err == nil {
 		s.CurrentDir = nextdir
@@ -273,39 +306,65 @@ func (s *Screen) enterCurrentDirectory()  {
 // Exits the current directory.
 func (s *Screen) exitCurrentDirectory() {
 	s.captureInput = false
-	s.SearchString = s.SearchString[:0]
-	s.CurrentDir.FilterContents(string(s.SearchString))
+	s.searchString = s.searchString[:0]
+	s.CurrentDir.FilterContents(string(s.searchString))
 	nextdir, err := s.CurrentDir.Ascend()
 	if nextdir != nil && err == nil {
 		s.CurrentDir = nextdir
 	}
 }
 
+func (s *Screen) setCaptureMode(mode CaptureMode) {
+	s.captureMode = mode
+
+}
+
 // Sets the application in the mode to capture input for the search string
 func (s *Screen) startCapturingInput() {
 	s.captureInput = true
-	s.SearchString = s.SearchString[:0]
+	switch s.captureMode {
+	case Search:
+		s.searchString = s.searchString[:]
+	case Command:
+		s.commandString = s.commandString[:]
+	}
+
 }
 
-// Exits the mode to capture input for the search string
+// Exits the mode to capture input
 func (s *Screen) stopCapturingInput() {
 	s.captureInput = false
-	s.SearchString = s.SearchString[:0]
-	s.CurrentDir.FilterContents(string(s.SearchString))
-}
-
-// Add a character to the search string
-func (s *Screen) appendToSearchString(ch rune) {
-	s.SearchString = append(s.SearchString, ch)
-	s.CurrentDir.FilterContents(string(s.SearchString))
-}
-
-// Remove a character from the search string
-func (s *Screen) popFromSearchString() {
-	if len(s.SearchString) > 0 {
-		s.SearchString = s.SearchString[:len(s.SearchString)-1]
-		s.CurrentDir.FilterContents(string(s.SearchString))
+	if s.captureMode == Search {
+		s.searchString = s.searchString[:0]
+		s.CurrentDir.FilterContents(string(s.searchString))
 	}
+}
+
+// Add a character to the currently capturing string
+func (s *Screen) appendToCaptureInput(ch rune) {
+	switch s.captureMode {
+	case Search:
+		s.searchString = append(s.searchString, ch)
+		s.CurrentDir.FilterContents(string(s.searchString))
+	case Command:
+		s.commandString = append(s.commandString, ch)
+	}
+}
+
+// Remove a character from the currently capturing string
+func (s *Screen) popFromCaptureInput() {
+	switch s.captureMode {
+	case Search:
+		if len(s.searchString) > 0 {
+			s.searchString = s.searchString[:len(s.searchString)-1]
+			s.CurrentDir.FilterContents(string(s.searchString))
+		}
+	case Command:
+		if len(s.commandString) > 0 {
+			s.commandString = s.commandString[:len(s.commandString)-1]
+		}
+	}
+
 }
 
 // Toggle position between first and last file in the directory
@@ -318,9 +377,9 @@ func (s *Screen) toggleIndexToExtremities() {
 }
 
 // Main loop of the application
-func (s *Screen) Main() string {
+func (s *Screen) Main() ExitCommand {
 
-	MainLoop:
+MainLoop:
 	for {
 		s.draw()
 
@@ -330,9 +389,9 @@ func (s *Screen) Main() string {
 				s.stopCapturingInput()
 				continue
 			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace {
-				s.popFromSearchString()
+				s.popFromCaptureInput()
 			} else if ev.Ch != 0 {
-				s.appendToSearchString(ev.Ch)
+				s.appendToCaptureInput(ev.Ch)
 				continue MainLoop
 			}
 		}
@@ -356,11 +415,23 @@ func (s *Screen) Main() string {
 				s.jumpDown()
 			case termbox.KeyCtrlH:
 				s.toggleHelp()
+			case termbox.KeyEnter:
+				if s.captureInput && s.captureMode == Command {
+					if curFile, err := s.CurrentDir.CurrentFile(); err == nil {
+						return ExitCommand{command: string(s.commandString),
+							args: []string{path.Join(s.CurrentDir.AbsPath, curFile.Name())}}
+					}
+				}
+
 			}
 			switch ev.Ch {
 			case 'q':
 				break MainLoop
 			case '/':
+				s.setCaptureMode(Search)
+				s.startCapturingInput()
+			case ':':
+				s.setCaptureMode(Command)
 				s.startCapturingInput()
 			case 'h':
 				s.CurrentDir.SetShowHidden(!s.CurrentDir.ShowHidden)
@@ -381,9 +452,9 @@ func (s *Screen) Main() string {
 	// Return the directory we end up in
 	currentItem, err := s.CurrentDir.CurrentFile()
 	if err == nil && currentItem.IsDir() && os.Getenv("EnterLastSelected") == "1" {
-		return path.Join(s.CurrentDir.AbsPath, currentItem.Name())
+		return ExitCommand{command: "cd", args: []string{path.Join(s.CurrentDir.AbsPath, currentItem.Name())}}
 	} else {
-		return s.CurrentDir.AbsPath
+		return ExitCommand{command: "cd", args: []string{s.CurrentDir.AbsPath}}
 	}
 
 }
@@ -394,15 +465,14 @@ func fatal(err error) {
 	os.Exit(1)
 }
 
-
 func main() {
 	var err error
 
 	for _, arg := range os.Args {
 		switch arg {
 		case "-h", "--help":
-			fmt.Fprintln(os.Stderr,"itree - A visual file system navigation tool.\n" +
-						  "Press h for information on hotkeys.")
+			fmt.Fprintln(os.Stderr, "itree - A visual file system navigation tool.\n"+
+				"Press h for information on hotkeys.")
 			os.Exit(0)
 		}
 	}
@@ -433,19 +503,18 @@ func main() {
 		fatal(err)
 	}
 
-	s := Screen{make([]rune, 0, 100),
-				curDir,
-				Directory,
-				false,
-				termbox.ColorCyan,
-				termbox.ColorGreen,
-				termbox.ColorYellow,
-				termbox.ColorWhite,
-
-				}
-	finalPath := s.Main()
-	// We must print the directory we end up in so that we can change to it
-	// If we end up selecting a directory item, then change into that directory,
-	// If we end up on a file item, change into that files directory
-	fmt.Print(finalPath)
+	s := Screen{searchString: make([]rune, 0, 100),
+		commandString:    make([]rune, 0, 100),
+		CurrentDir:       curDir,
+		state:            Directory,
+		captureMode:      Search,
+		highlightedColor: termbox.ColorCyan,
+		filteredColor:    termbox.ColorGreen,
+		directoryColor:   termbox.ColorYellow,
+		fileColor:        termbox.ColorWhite,
+	}
+	exitCommand := s.Main()
+	// Print the command we want to execute in the current shell
+	// The companion shell script will execute this command in the current shell.
+	fmt.Print(exitCommand.FullCommand())
 }

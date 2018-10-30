@@ -26,6 +26,7 @@ sudo ./install.sh
 ```
 
 
+
 Usage
 -----
 
@@ -40,16 +41,33 @@ Press `ESC`, `q` or `CTRL+C` to exit.
 Use your arrow keys to easily navigate the directory tree starting from your current directory.
 itree will change to the directory in which you navigate to when you exit itree.
 
-itree also provides some other convenient hotkeys for easier navigation.
-Press CTRL+h to show a help screen of all available hotkeys.
-
-
 Without installation you must compile the go binary and call itree as following:
 
 ```bash
-
 go build itree.go
 
 cd $(./itree)
-
 ```
+
+HotKeys
+-------
+itree also provides some other convenient hotkeys for easier navigation.
+Press CTRL+h to show a help screen of all available hotkeys.
+
+`CTRL + h` - Opens help menu to show the list of hotkey mappings.
+
+`h` - Toggle on / off visibility of hidden files.
+
+`e` - Move selector half the distance between the current position and the top of the directory.
+
+`d` - Move selector half the distance between the current position and the bottom of the directory.
+
+`c` - Toggle position 
+
+`a` - Jump up two directories.
+
+`/` - Enters input capture mode for directory filtering.
+
+`:` - Enters input capture mode for exit command. 
+
+

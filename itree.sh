@@ -2,14 +2,9 @@
 
 source ${HOME}/.config/itree/preferences
 
-DIR=$(itree2 "$@")
+# Execute itree and capture the resulting command it spits back
+CMD=$(itree2 "$@")
 
-if [ -d "$DIR" ]; then
-	echo "Changing directory to $DIR"
-	cd $DIR
-	if [ "${PrintDirOnExit}" = "1" ]; then
-		ls
-	fi	
-fi
-
+# Execute the command it spits back
+eval ${CMD}
 
