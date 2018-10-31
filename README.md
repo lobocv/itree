@@ -56,6 +56,14 @@ Press CTRL+h to show a help screen of all available hotkeys.
 
 `CTRL + h` - Opens help menu to show the list of hotkey mappings.
 
+`←	→` - Enter / exit currently selected directory.
+
+`↑	↓` - Move directory item selector position by one.
+
+`ESC` `q` - Exit itree and change directory. 
+
+`CTRL+C`  - Exit without changing directory. 
+
 `h` - Toggle on / off visibility of hidden files.
 
 `e` - Move selector half the distance between the current position and the top of the directory.
@@ -69,5 +77,4 @@ Press CTRL+h to show a help screen of all available hotkeys.
 `/` - Enters input capture mode for directory filtering.
 
 `:` - Enters input capture mode for exit command. 
-
 

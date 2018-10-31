@@ -218,22 +218,33 @@ func (s *Screen) draw() {
 	switch s.state {
 	case Help:
 		var help = []string{
-			"itree - An interactive tree application for file system navigation.",
-			"Calvin Lobo, 2018",
-			"https://github.com/lobocv/itree",
+			"Calvin Lobo, 2018 - https://github.com/lobocv/itree",
 			"",
-			"CTRL+h 	- Opens help menu to show the list of hotkey mappings.",
-			"h 			- Toggle on / off visibility of hidden files.",
-			"e 			- Move selector half the distance between the current position and the top of the directory.",
-			"d 			- Move selector half the distance between the current position and the bottom of the directory.",
-			"c 			- Toggle position",
-			"a 			- Jump up two directories.",
-			"/ 			- Enters input capture mode for directory filtering.",
-			": 			- Enters input capture mode for exit command.",
+			"itree - An interactive tree application for file system navigation.",
+		}
+		hotkeys := []struct{ hotkey, description string }{
+
+			{"Left / Right", "Enter / exit currently selected directory."},
+			{"Up / Down", "Move directory item selector position by one."},
+			{"ESC or q", "Exit and change directory."},
+			{"CTRL + C", "Exit without changing directory."},
+			{"CTRL + h", "Opens help menu to show the list of hotkey mappings."},
+			{"h", "Toggle on / off visibility of hidden files."},
+			{"e", "Move selector half the distance between the current position and the top of the directory."},
+			{"d", "Move selector half the distance between the current position and the bottom of the directory."},
+			{"c", "Toggle position."},
+			{"a", "Jump up two directories."},
+			{"/", "Enters input capture mode for directory filtering."},
+			{":", "Enters input capture mode for exit command."},
 		}
 		s.clearScreen()
 		for ln, line := range help {
 			s.Print(0, ln, termbox.ColorWhite, termbox.ColorDefault, line)
+		}
+		for ln, hotkey := range hotkeys {
+			hk := fmt.Sprintf("%-12v -  ", hotkey.hotkey)
+			s.Print(0, ln+len(help)+1, termbox.ColorWhite, termbox.ColorDefault, hk)
+			s.Print(len(hk), ln+len(help)+1, termbox.ColorWhite, termbox.ColorDefault, hotkey.description)
 		}
 
 	case Directory:
@@ -390,7 +401,7 @@ MainLoop:
 				continue
 			} else if ev.Key == termbox.KeyBackspace2 || ev.Key == termbox.KeyBackspace {
 				s.popFromCaptureInput()
-			} else if ev.Ch != 0 {
+			} else if ev.Ch != 0 || ev.Key == termbox.KeySpace {
 				s.appendToCaptureInput(ev.Ch)
 				continue MainLoop
 			}
@@ -399,8 +410,14 @@ MainLoop:
 		switch ev.Type {
 		case termbox.EventKey:
 			switch ev.Key {
-			case termbox.KeyEsc, termbox.KeyCtrlC:
-				break MainLoop
+			case termbox.KeyEsc:
+				if s.state == Help {
+					s.toggleHelp()
+				} else {
+					break MainLoop
+				}
+			case termbox.KeyCtrlC:
+				return ExitCommand{"", nil}
 			case termbox.KeyArrowUp:
 				s.CurrentDir.MoveSelector(-1)
 			case termbox.KeyArrowDown:
@@ -426,7 +443,11 @@ MainLoop:
 			}
 			switch ev.Ch {
 			case 'q':
-				break MainLoop
+				if s.state == Help {
+					s.toggleHelp()
+				} else {
+					break MainLoop
+				}
 			case '/':
 				s.setCaptureMode(Search)
 				s.startCapturingInput()
