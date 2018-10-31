@@ -1,8 +1,7 @@
-package main
+package ctx
 
 import (
 	"fmt"
-	"github.com/lobocv/itree/ctx"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -10,18 +9,17 @@ import (
 
 var testDirRoot = "/tmp/itree"
 
-var dirpaths = []string {testDirRoot + "/a/a1/a2",
-					  	 testDirRoot + "/a/A1",
-					  	 testDirRoot + "/b/b1/b2",
-						 }
+var dirpaths = []string{testDirRoot + "/a/a1/a2",
+	testDirRoot + "/a/A1",
+	testDirRoot + "/b/b1/b2",
+}
 
-var filepaths = []string {"/a/f1", "/a/f2", "/a/f3",
-						  "/a/a1/f1", "/a/a1/.hidden",
-						  "/a/a1/a2/f2", "/a/a1/a2/f3"}
-
+var filepaths = []string{"/a/f1", "/a/f2", "/a/f3",
+	"/a/a1/f1", "/a/a1/.hidden",
+	"/a/a1/a2/f2", "/a/a1/a2/f3"}
 
 func setUp() error {
-		for _, p := range dirpaths {
+	for _, p := range dirpaths {
 		err := os.MkdirAll(p, 0777)
 		if err != nil {
 			return err
@@ -30,7 +28,7 @@ func setUp() error {
 
 	for _, fp := range filepaths {
 		var contents []byte
-		err := ioutil.WriteFile(testDirRoot + fp, contents, 0777)
+		err := ioutil.WriteFile(testDirRoot+fp, contents, 0777)
 		if err != nil {
 			panic(err)
 		}
@@ -60,7 +58,7 @@ func TestFileIdxNavigation(t *testing.T) {
 		t.Error(fmt.Sprintf("Expected FileIdx =%d, found %d", expected, a.FileIdx))
 	}
 	a.MoveSelector(100)
-	expected = len(a.Files)-1
+	expected = len(a.Files) - 1
 	if a.FileIdx != expected {
 		t.Error(fmt.Sprintf("Expected FileIdx =%d, found %d", expected, a.FileIdx))
 	}
@@ -125,7 +123,7 @@ func TestFilterContents(t *testing.T) {
 		t.Error(fmt.Sprintf("Expected %d files, found %d", expected, len(a.FilteredFiles)))
 	}
 	// Check that filtering automatically moves index
-	expected =2
+	expected = 2
 	if a.FileIdx != expected {
 		t.Error(fmt.Sprintf("Expected file index %d, found %d", expected, a.FileIdx))
 	}
@@ -147,7 +145,7 @@ func TestFilterContents(t *testing.T) {
 	}
 
 	a.MoveSelector(100)
-	expected = len(a.Files) -1
+	expected = len(a.Files) - 1
 	if a.FileIdx != expected {
 		t.Error(fmt.Sprintf("Expected file index %d, found %d", expected, a.FileIdx))
 	}
@@ -161,11 +159,10 @@ func TestFilterContents(t *testing.T) {
 
 }
 
-
-func getDirChain() (*ctx.Directory, error) {
+func getDirChain() (*Directory, error) {
 	cwd := testDirRoot + "/a/a1/a2"
 
-	curDir, err := ctx.CreateDirectoryChain(cwd)
+	curDir, err := CreateDirectoryChain(cwd)
 	return curDir, err
 }
 
@@ -176,7 +173,6 @@ func TestCreateDirectoryChain(t *testing.T) {
 		t.Error(err)
 	}
 	defer tearDown()
-
 
 	curDir, err := getDirChain()
 	if err != nil {
@@ -196,4 +192,12 @@ func TestCreateDirectoryChain(t *testing.T) {
 		t.Error("top level directory has a parent")
 	}
 
+}
+
+func TestGetPathComponents(t *testing.T) {
+	components := getPathComponents("/")
+	expected := 1
+	if len(components) != expected {
+		t.Error(fmt.Sprintf("Expected %d components, found %d", expected, len(components)))
+	}
 }

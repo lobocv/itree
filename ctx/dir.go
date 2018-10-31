@@ -24,7 +24,9 @@ func getPathComponents(path string) []string {
 		dir, _ = filepath.Split(dir)
 		ok = dir != "/"
 	}
-	components = append([]string{"/"}, components...)
+	if components[0] != "/" {
+		components = append([]string{"/"}, components...)
+	}
 	return components
 }
 
@@ -32,7 +34,7 @@ func CreateDirectoryChain(path string) (*Directory, error) {
 
 	var prevDir, nextDir *Directory
 	var err error
-	for _, subdir := range getPathComponents(path){
+	for _, subdir := range getPathComponents(path) {
 		nextDir, err = NewDirectory(subdir)
 
 		if err != nil {
@@ -53,7 +55,6 @@ func CreateDirectoryChain(path string) (*Directory, error) {
 
 	return nextDir, nil
 }
-
 
 /*
 Directory methods
