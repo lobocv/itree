@@ -270,7 +270,7 @@ func (s *Screen) draw() {
 				case Search:
 					instruction = "Enter a search string:  " + string(s.searchString)
 				case Command:
-					instruction = "Enter a terminal command:  " + string(s.commandString)
+					instruction = "Enter a terminal command and hit enter:  " + string(s.commandString)
 				}
 				s.Print(0, 1, termbox.ColorWhite, termbox.ColorDefault, instruction)
 			}
