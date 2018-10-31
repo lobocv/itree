@@ -3,7 +3,7 @@ Interactive tree command for file system navigation.
 
 
 
-![itree Example](https://github.com/lobocv/itree/blob/master/itree.png?raw=true)
+![itree Example](https://github.com/lobocv/itree/blob/master/itree.gif?raw=true)
 
 
 Requirements
