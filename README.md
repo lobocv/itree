@@ -46,7 +46,7 @@ Without installation you must compile the go binary and call itree as following:
 ```bash
 go build itree.go
 
-cd $(./itree)
+eval $(./itree)
 ```
 
 HotKeys
