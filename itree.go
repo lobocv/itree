@@ -320,6 +320,7 @@ func (s *Screen) enterCurrentDirectory() {
 	if nextdir != nil && err == nil {
 		s.CurrentDir = nextdir
 	}
+	s.stopCapturingInput()
 }
 
 // Exits the current directory.
@@ -331,6 +332,7 @@ func (s *Screen) exitCurrentDirectory() {
 	if nextdir != nil && err == nil {
 		s.CurrentDir = nextdir
 	}
+	s.stopCapturingInput()
 }
 
 func (s *Screen) setCaptureMode(mode CaptureMode) {
