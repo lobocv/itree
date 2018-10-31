@@ -217,13 +217,16 @@ func (s *Screen) toggleHelp() ScreenState {
 func (s *Screen) draw() {
 	switch s.state {
 	case Help:
+		var lc int
 		var help = []string{
 			"Calvin Lobo, 2018 - https://github.com/lobocv/itree",
 			"",
-			"itree - An interactive tree application for file system navigation.",
+			"An interactive tree application for file system navigation.",
+			"",
+			"                           CONTROLS                             ",
+			"================================================================",
 		}
 		hotkeys := []struct{ hotkey, description string }{
-
 			{"Left / Right", "Enter / exit currently selected directory."},
 			{"Up / Down", "Move directory item selector position by one."},
 			{"ESC or q", "Exit and change directory."},
@@ -238,14 +241,19 @@ func (s *Screen) draw() {
 			{":", "Enters input capture mode for exit command."},
 		}
 		s.clearScreen()
-		for ln, line := range help {
-			s.Print(0, ln, termbox.ColorWhite, termbox.ColorDefault, line)
+		for _, line := range help {
+			s.Print(0, lc, termbox.ColorWhite, termbox.ColorDefault, line)
+			lc++
 		}
-		for ln, hotkey := range hotkeys {
+		lc++
+		for _, hotkey := range hotkeys {
 			hk := fmt.Sprintf("%-12v -  ", hotkey.hotkey)
-			s.Print(0, ln+len(help)+1, termbox.ColorWhite, termbox.ColorDefault, hk)
-			s.Print(len(hk), ln+len(help)+1, termbox.ColorWhite, termbox.ColorDefault, hotkey.description)
+			s.Print(0, lc, termbox.ColorWhite, termbox.ColorDefault, hk)
+			s.Print(len(hk), lc, termbox.ColorWhite, termbox.ColorDefault, hotkey.description)
+			lc++
 		}
+		lc += 2
+		s.Print(0, lc, termbox.ColorWhite, termbox.ColorDefault, "Press q to exit this menu.")
 
 	case Directory:
 		upperLevels, err := strconv.Atoi(os.Getenv("MaxUpperLevels"))
