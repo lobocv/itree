@@ -17,9 +17,15 @@ import (
 func max(i, j int) int {
 	if i > j {
 		return i
-	} else {
-		return j
 	}
+	return j
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Create an enumeration for tracking what the screen's "state" is
@@ -49,13 +55,14 @@ func (cmd *ExitCommand) FullCommand() string {
 
 // Screen represents the application
 type Screen struct {
-	CurrentDir    *ctx.Directory
-	state         ScreenState
-	searchString  []rune
-	commandString []rune
-	captureInput  bool
-	captureMode   CaptureMode
+	CurrentDir      *ctx.Directory
+	state           ScreenState
+	searchString    []rune
+	commandString   []rune
+	captureInput    bool
+	captureMode     CaptureMode
 	showPermissions bool
+	maxLevelWidth   int
 
 	highlightedColor termbox.Attribute
 	filteredColor    termbox.Attribute
@@ -112,16 +119,20 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 		pagejump := float64(screenHeight) / 5
 		scrollOffsety = int(math.Ceil(float64(scrollOffsety)/pagejump) * pagejump)
 	}
-	lastLevel := len(dirlist)-1
+	lastLevel := len(dirlist) - 1
 	// Iterate through the directory list, drawing a tree structure
 	for level, dir := range dirlist {
-		maxLineWidth = 0
+		maxLineWidth = s.maxLevelWidth
+		if level == len(dirlist)-1 {
+			maxLineWidth = 0
+		}
+
 
 		for ii, f := range dir.Files {
 
 			// Keep track of the longest length item in the directory
 			filenameLen := len(f.Name())
-			if filenameLen > maxLineWidth {
+			if s.maxLevelWidth == 0 && filenameLen > maxLineWidth {
 				maxLineWidth = filenameLen
 			}
 
@@ -168,7 +179,14 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 			}
 
 			// Create the item label, add / if it is a directory
-			line.WriteString(f.Name())
+			itemName := f.Name()
+			if maxLineWidth > 0 && len(itemName) > maxLineWidth {
+				line.WriteString(itemName[:min(len(itemName), maxLineWidth-3)])
+				line.WriteString("...")
+			} else {
+				line.WriteString(itemName)
+			}
+
 			if f.IsDir() {
 				line.WriteString("/")
 			}
@@ -196,6 +214,9 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 		// Determine the length of line we need to draw to connect to the next directory
 		if len(dir.Files) > 0 {
 			stretch = maxLineWidth - len(dir.Files[dir.FileIdx].Name())
+			if stretch < 0 {
+				stretch = 0
+			}
 		}
 
 		// Shift the draw position in preparation for the next directory
@@ -552,6 +573,7 @@ func main() {
 		state:            Directory,
 		captureMode:      Search,
 		showPermissions:  false,
+		maxLevelWidth:    15,
 		highlightedColor: termbox.ColorCyan,
 		filteredColor:    termbox.ColorGreen,
 		directoryColor:   termbox.ColorYellow,
