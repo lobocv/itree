@@ -55,6 +55,7 @@ type Screen struct {
 	commandString []rune
 	captureInput  bool
 	captureMode   CaptureMode
+	showPermissions bool
 
 	highlightedColor termbox.Attribute
 	filteredColor    termbox.Attribute
@@ -111,7 +112,7 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 		pagejump := float64(screenHeight) / 5
 		scrollOffsety = int(math.Ceil(float64(scrollOffsety)/pagejump) * pagejump)
 	}
-
+	lastLevel := len(dirlist)-1
 	// Iterate through the directory list, drawing a tree structure
 	for level, dir := range dirlist {
 		maxLineWidth = 0
@@ -171,7 +172,10 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 			if f.IsDir() {
 				line.WriteString("/")
 			}
-
+			if level == lastLevel && s.showPermissions {
+				line.WriteString("\t")
+				line.WriteString(f.Mode().Perm().String())
+			}
 			// Calculate the draw position
 			y := levelOffsetY + ii - scrollOffsety
 			x := levelOffsetX
@@ -227,18 +231,19 @@ func (s *Screen) draw() {
 			"================================================================",
 		}
 		hotkeys := []struct{ hotkey, description string }{
-			{"Left / Right", "Enter / exit currently selected directory."},
-			{"Up / Down", "Move directory item selector position by one."},
-			{"ESC or q", "Exit and change directory."},
-			{"CTRL + C", "Exit without changing directory."},
-			{"CTRL + h", "Opens help menu to show the list of hotkey mappings."},
-			{"h", "Toggle on / off visibility of hidden files."},
-			{"e", "Move selector half the distance between the current position and the top of the directory."},
-			{"d", "Move selector half the distance between the current position and the bottom of the directory."},
-			{"c", "Toggle position."},
-			{"a", "Jump up two directories."},
-			{"/", "Enters input capture mode for directory filtering."},
-			{":", "Enters input capture mode for exit command."},
+			{"Left / Right", "Enter / exit currently selected directory"},
+			{"Up / Down", "Move directory item selector position by one"},
+			{"ESC or q", "Exit and change directory"},
+			{"CTRL + C", "Exit without changing directory"},
+			{"CTRL + h", "Opens help menu to show the list of hotkey mappings"},
+			{"h", "Toggle on / off visibility of hidden files"},
+			{"e", "Move selector half the distance between the current position and the top of the directory"},
+			{"d", "Move selector half the distance between the current position and the bottom of the directory"},
+			{"c", "Toggle position"},
+			{"a", "Jump up two directories"},
+			{"p", "Show file permissions"},
+			{"/", "Enters input capture mode for directory filtering"},
+			{":", "Enters input capture mode for exit command"},
 		}
 		s.clearScreen()
 		for _, line := range help {
@@ -397,6 +402,11 @@ func (s *Screen) toggleIndexToExtremities() {
 	}
 }
 
+// Toggle position between first and last file in the directory
+func (s *Screen) togglePermissions() {
+	s.showPermissions = !s.showPermissions
+}
+
 // Main loop of the application
 func (s *Screen) Main() ExitCommand {
 
@@ -473,6 +483,8 @@ MainLoop:
 				s.jumpUp()
 			case 'd':
 				s.jumpDown()
+			case 'p':
+				s.togglePermissions()
 			case 'c':
 				s.toggleIndexToExtremities()
 			}
@@ -539,6 +551,7 @@ func main() {
 		CurrentDir:       curDir,
 		state:            Directory,
 		captureMode:      Search,
+		showPermissions:  false,
 		highlightedColor: termbox.ColorCyan,
 		filteredColor:    termbox.ColorGreen,
 		directoryColor:   termbox.ColorYellow,
