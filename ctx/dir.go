@@ -85,11 +85,11 @@ func NewDirectory(path string) (*Directory, error) {
 		return nil, err
 	}
 	d.AbsPath = path
-	d.updateContents()
+	d.UpdateContents()
 	return d, nil
 }
 
-func (d *Directory) updateContents() error {
+func (d *Directory) UpdateContents() error {
 
 	files, err := ioutil.ReadDir(d.AbsPath)
 	if err != nil {
@@ -194,7 +194,7 @@ func (d *Directory) MoveSelector(dy int) {
 
 func (d *Directory) SetShowHidden(v bool) {
 	d.ShowHidden = v
-	d.updateContents()
+	d.UpdateContents()
 }
 
 func (d *Directory) FilterContents(searchstring string) {

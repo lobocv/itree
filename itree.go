@@ -40,8 +40,9 @@ const (
 type CaptureMode int
 
 const (
-	Search CaptureMode = iota
-	Command
+	modeSearch CaptureMode = iota
+	modeExitCommand
+	modeFilePerm
 )
 
 type ExitCommand struct {
@@ -126,7 +127,6 @@ func (s *Screen) drawDirContents(x0, y0 int, dirlist ctx.DirView) error {
 		if level == len(dirlist)-1 {
 			maxLineWidth = 0
 		}
-
 
 		for ii, f := range dir.Files {
 
@@ -263,6 +263,7 @@ func (s *Screen) draw() {
 			{"c", "Toggle position"},
 			{"a", "Jump up two directories"},
 			{"p", "Show file permissions"},
+			{"CTRL + p", "Set file permissions bitmask (eg 644, 777, 400)"},
 			{"/", "Enters input capture mode for directory filtering"},
 			{":", "Enters input capture mode for exit command"},
 		}
@@ -293,9 +294,11 @@ func (s *Screen) draw() {
 			s.Print(0, 0, termbox.ColorRed, termbox.ColorDefault, s.CurrentDir.AbsPath)
 			if s.captureInput {
 				switch s.captureMode {
-				case Search:
+				case modeSearch:
 					instruction = "Enter a search string:  " + string(s.searchString)
-				case Command:
+				case modeFilePerm:
+					instruction = "Enter the file permissions:  " + string(s.commandString)
+				case modeExitCommand:
 					instruction = "Enter a terminal command and hit enter:  " + string(s.commandString)
 				}
 				s.Print(0, 1, termbox.ColorWhite, termbox.ColorDefault, instruction)
@@ -370,10 +373,12 @@ func (s *Screen) setCaptureMode(mode CaptureMode) {
 func (s *Screen) startCapturingInput() {
 	s.captureInput = true
 	switch s.captureMode {
-	case Search:
+	case modeSearch:
 		s.searchString = s.searchString[:]
-	case Command:
+	case modeExitCommand:
 		s.commandString = s.commandString[:]
+	case modeFilePerm:
+		s.commandString = s.commandString[:0]
 	}
 
 }
@@ -381,7 +386,7 @@ func (s *Screen) startCapturingInput() {
 // Exits the mode to capture input
 func (s *Screen) stopCapturingInput() {
 	s.captureInput = false
-	if s.captureMode == Search {
+	if s.captureMode == modeSearch {
 		s.searchString = s.searchString[:0]
 		s.CurrentDir.FilterContents(string(s.searchString))
 	}
@@ -390,10 +395,10 @@ func (s *Screen) stopCapturingInput() {
 // Add a character to the currently capturing string
 func (s *Screen) appendToCaptureInput(ch rune) {
 	switch s.captureMode {
-	case Search:
+	case modeSearch:
 		s.searchString = append(s.searchString, ch)
 		s.CurrentDir.FilterContents(string(s.searchString))
-	case Command:
+	case modeExitCommand, modeFilePerm:
 		s.commandString = append(s.commandString, ch)
 	}
 }
@@ -401,12 +406,12 @@ func (s *Screen) appendToCaptureInput(ch rune) {
 // Remove a character from the currently capturing string
 func (s *Screen) popFromCaptureInput() {
 	switch s.captureMode {
-	case Search:
+	case modeSearch:
 		if len(s.searchString) > 0 {
 			s.searchString = s.searchString[:len(s.searchString)-1]
 			s.CurrentDir.FilterContents(string(s.searchString))
 		}
-	case Command:
+	case modeExitCommand, modeFilePerm:
 		if len(s.commandString) > 0 {
 			s.commandString = s.commandString[:len(s.commandString)-1]
 		}
@@ -473,14 +478,29 @@ MainLoop:
 				s.jumpDown()
 			case termbox.KeyCtrlH:
 				s.toggleHelp()
+			case termbox.KeyCtrlP:
+				s.setCaptureMode(modeFilePerm)
+				s.startCapturingInput()
 			case termbox.KeyEnter:
-				if s.captureInput && s.captureMode == Command {
+				if s.captureInput {
 					if curFile, err := s.CurrentDir.CurrentFile(); err == nil {
-						return ExitCommand{command: string(s.commandString),
-							args: []string{path.Join(s.CurrentDir.AbsPath, curFile.Name())}}
+						switch s.captureMode {
+						case modeExitCommand:
+							return ExitCommand{command: string(s.commandString),
+								args: []string{path.Join(s.CurrentDir.AbsPath, curFile.Name())}}
+						case modeFilePerm:
+							m, err := strconv.ParseUint(string(s.commandString), 8, 64)
+							if err == nil {
+								err = os.Chmod(curFile.Name(), os.FileMode(m))
+								if err != nil {
+									fatal(err)
+								}
+								s.CurrentDir.UpdateContents()
+							}
+						}
 					}
+					s.stopCapturingInput()
 				}
-
 			}
 			switch ev.Ch {
 			case 'q':
@@ -490,10 +510,10 @@ MainLoop:
 					break MainLoop
 				}
 			case '/':
-				s.setCaptureMode(Search)
+				s.setCaptureMode(modeSearch)
 				s.startCapturingInput()
 			case ':':
-				s.setCaptureMode(Command)
+				s.setCaptureMode(modeExitCommand)
 				s.startCapturingInput()
 			case 'h':
 				s.CurrentDir.SetShowHidden(!s.CurrentDir.ShowHidden)
@@ -525,7 +545,7 @@ MainLoop:
 
 // Print error message to stderr and exit with error code 1
 func fatal(err error) {
-	fmt.Fprintln(os.Stderr, fmt.Sprintf("%v", err))
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("Error: %v", err))
 	os.Exit(1)
 }
 
@@ -571,7 +591,7 @@ func main() {
 		commandString:    make([]rune, 0, 100),
 		CurrentDir:       curDir,
 		state:            Directory,
-		captureMode:      Search,
+		captureMode:      modeSearch,
 		showPermissions:  false,
 		maxLevelWidth:    15,
 		highlightedColor: termbox.ColorCyan,
