@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/lobocv/itree/ctx"
-	"github.com/nsf/termbox-go"
 	"math"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/nsf/termbox-go"
+
+	"github.com/lobocv/itree/ctx"
 )
 
 func max(i, j int) int {

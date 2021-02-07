@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 func getPathComponents(path string) []string {
@@ -202,7 +204,9 @@ func (d *Directory) FilterContents(searchstring string) {
 
 	if len(searchstring) > 0 {
 		for ii, f := range d.Files {
-			if strings.Contains(f.Name(), searchstring) {
+
+			if fuzzy.Match(searchstring, f.Name()) {
+				//strings.Contains(f.Name(), searchstring) {
 				d.FilteredFiles[ii] = f
 			}
 		}
